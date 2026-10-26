@@ -110,7 +110,7 @@ def test_excel_report_includes_debt_balance_columns():
     sheet = workbook["Assumptions"]
     assert sheet["B10"].value.startswith("=")
     assert sheet["L10"].value.startswith("=")
-    assert sheet["M10"].value == "=F10-G10"
+    assert sheet["M10"].value == '=IF(A10="","",F10-G10)'
 
 
 def test_pdf_report_has_pdf_signature():
