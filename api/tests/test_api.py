@@ -73,3 +73,27 @@ def test_rejects_unreasonably_large_project_cost():
         json={**payload(), "project_cost": 1e16},
     )
     assert response.status_code == 422
+
+
+def test_excel_endpoint_rejects_invalid_assumptions():
+    response = client.post(
+        "/api/reports/excel",
+        json={**payload(), "variable_cost_pct": 101},
+    )
+    assert response.status_code == 422
+
+
+def test_pdf_endpoint_rejects_invalid_assumptions():
+    response = client.post(
+        "/api/reports/pdf",
+        json={**payload(), "loan_years": 0},
+    )
+    assert response.status_code == 422
+
+
+def test_projection_rejects_excessive_projection_years():
+    response = client.post(
+        "/api/projection",
+        json={**payload(), "projection_years": 11},
+    )
+    assert response.status_code == 422
