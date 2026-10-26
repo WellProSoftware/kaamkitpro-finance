@@ -85,12 +85,16 @@ def test_excel_model_inputs_drive_projection_and_summary_formulas():
 def test_excel_model_inputs_have_range_validation_and_clear_errors():
     workbook = workbook_for()
     inputs = workbook["Model Inputs"]
+    expected_cells = (
+        "B5", "B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13"
+    )
     validations = {
-        cell.coordinate: validation
-        for validation in inputs.data_validations.dataValidation
-        for cell_range in validation.ranges
-        for row in inputs[cell_range.coord]
-        for cell in (row if isinstance(row, tuple) else (row,))
+        cell: next(
+            validation
+            for validation in inputs.data_validations.dataValidation
+            if cell in validation.cells
+        )
+        for cell in expected_cells
     }
 
     expected = {
