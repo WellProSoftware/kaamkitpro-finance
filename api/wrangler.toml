@@ -7,4 +7,12 @@ compatibility_flags = ["python_workers"]
 FINANCE_CORS_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000"
 
 [python_modules]
-exclude = ["**/*.pyc", "**/__pycache__", "reportlab/fonts/*.sfd"]
+exclude = [
+  "**/*.pyc",
+  "**/__pycache__",
+  "reportlab/fonts/*.sfd",
+  "PIL/**",
+  "pillow/**",
+  "**/PIL/**",
+  "**/pillow/**",
+]
