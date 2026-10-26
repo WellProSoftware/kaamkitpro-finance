@@ -3,13 +3,51 @@ from __future__ import annotations
 
 import shutil
 import subprocess
-from io import BytesIO
 from pathlib import Path
 
 import pytest
 from openpyxl import load_workbook
 
 from app.reports import build_excel_report
+
+
+def recalculate_with_libreoffice(source: Path, output_dir: Path, profile: Path) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    result = subprocess.run(
+        [
+            "soffice",
+            "--headless",
+            f"-env:UserInstallation={profile.as_uri()}",
+            "--convert-to",
+            "xlsx",
+            "--outdir",
+            str(output_dir),
+            str(source),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=90,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    calculated_path = output_dir / source.name
+    assert calculated_path.exists(), result.stdout + result.stderr
+    return calculated_path
+
+
+def assert_no_formula_errors(workbook) -> None:
+    for sheet_name, cell_range in (
+        ("Assumptions", ("A10", "M12")),
+        ("Executive Summary", ("A8", "F10")),
+    ):
+        sheet = workbook[sheet_name]
+        start, end = cell_range
+        for row in sheet[start:end]:
+            for cell in row:
+                assert not (
+                    isinstance(cell.value, str)
+                    and cell.value.startswith("#")
+                ), f"Formula error at {sheet_name}!{cell.coordinate}: {cell.value}"
 
 
 @pytest.mark.skipif(shutil.which("soffice") is None, reason="LibreOffice is not installed")
@@ -37,32 +75,13 @@ def test_excel_workbook_recalculates_live_forecast_and_summary(tmp_path: Path) -
     source = tmp_path / "finance-model.xlsx"
     source.write_bytes(build_excel_report(projection))
 
-    # Keep the generated workbook formulas intact, then let Calc calculate and
-    # persist cached formula results for openpyxl's data_only reader.
-    profile = (tmp_path / "lo-profile").as_uri()
-    result = subprocess.run(
-        [
-            "soffice",
-            "--headless",
-            f"-env:UserInstallation={profile}",
-            "--convert-to",
-            "xlsx",
-            "--outdir",
-            str(tmp_path / "recalculated"),
-            str(source),
-        ],
-        capture_output=True,
-        text=True,
-        timeout=90,
-        check=False,
+    # First pass: calculate the workbook with its original assumptions.
+    baseline_path = recalculate_with_libreoffice(
+        source, tmp_path / "baseline", tmp_path / "lo-profile-baseline"
     )
-    assert result.returncode == 0, result.stdout + result.stderr
-
-    calculated_path = tmp_path / "recalculated" / source.name
-    assert calculated_path.exists(), result.stdout + result.stderr
-    workbook = load_workbook(calculated_path, data_only=True)
-    assumptions = workbook["Assumptions"]
-    summary = workbook["Executive Summary"]
+    baseline = load_workbook(baseline_path, data_only=True)
+    assumptions = baseline["Assumptions"]
+    summary = baseline["Executive Summary"]
 
     # Revenue is 12 * monthly revenue, growing by 10% per year.
     assert assumptions["C10"].value == pytest.approx(1_200_000)
@@ -78,17 +97,26 @@ def test_excel_workbook_recalculates_live_forecast_and_summary(tmp_path: Path) -
     assert assumptions["L10"].value == pytest.approx(480_000)
     assert summary["B8"].value == pytest.approx(1_200_000)
     assert summary["C8"].value == pytest.approx(480_000)
+    assert_no_formula_errors(baseline)
 
-    # No spreadsheet formula errors in key output ranges.
-    for sheet_name, cell_range in (
-        ("Assumptions", ("A10", "M12")),
-        ("Executive Summary", ("A8", "F10")),
-    ):
-        sheet = workbook[sheet_name]
-        start, end = cell_range
-        for row in sheet[start:end]:
-            for cell in row:
-                assert not (
-                    isinstance(cell.value, str)
-                    and cell.value.startswith("#")
-                ), f"Formula error at {sheet_name}!{cell.coordinate}: {cell.value}"
+    # Change a yellow editable input and recalculate a second copy. The
+    # formula outputs must follow the input rather than retain stale values.
+    edited_source = tmp_path / "finance-model-edited.xlsx"
+    editable = load_workbook(source, data_only=False)
+    editable["Model Inputs"]["B7"] = 120_000
+    editable.save(edited_source)
+
+    edited_path = recalculate_with_libreoffice(
+        edited_source, tmp_path / "edited", tmp_path / "lo-profile-edited"
+    )
+    edited = load_workbook(edited_path, data_only=True)
+    edited_assumptions = edited["Assumptions"]
+    edited_summary = edited["Executive Summary"]
+
+    assert edited_assumptions["C10"].value == pytest.approx(1_440_000)
+    assert edited_assumptions["C11"].value == pytest.approx(1_584_000)
+    assert edited_assumptions["F10"].value == pytest.approx(624_000)
+    assert edited_summary["B8"].value == pytest.approx(1_440_000)
+    assert edited_summary["C8"].value == pytest.approx(624_000)
+    assert edited_assumptions["C10"].value != assumptions["C10"].value
+    assert_no_formula_errors(edited)
