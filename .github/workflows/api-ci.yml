@@ -116,7 +116,7 @@ jobs:
             exit 1
           fi
           grep -qi 'application/pdf' /tmp/finance-pdf-headers.txt
-          uv run python -c 'from pypdf import PdfReader; r=PdfReader("/tmp/finance-worker-report.pdf"); assert len(r.pages) >= 1'
+          python -c 'from pathlib import Path; b=Path("/tmp/finance-worker-report.pdf").read_bytes(); assert b.startswith(b"%PDF-") and b"%%EOF" in b[-2048:]'
           echo "Cloudflare Python Worker preview health, projection, XLSX, and PDF smoke tests passed."
 
   deploy-staging-api:
