@@ -30,8 +30,10 @@ def test_excel_report_contains_formula_cells():
     content = build_excel_report(sample_projection())
     workbook = load_workbook(BytesIO(content), data_only=False)
     sheet = workbook["Assumptions"]
-    assert sheet["E10"].value == "=B10-C10-D10"
-    assert sheet["H10"].value == "=F10+G10"
+    assert sheet["F10"].value == "=C10-D10-E10"
+    assert sheet["I10"].value == "=G10+H10"
+    assert sheet["J10"].value == '=IF(I10=0,"",F10/I10)'
+    assert sheet["M10"].value == "=F10-G10"
 
 
 def test_pdf_report_has_pdf_signature():
