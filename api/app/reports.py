@@ -48,6 +48,9 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     inputs.append(["KAAMKITPRO FINANCE | EDITABLE MODEL INPUTS"])
     inputs.append(["Project name", name])
     inputs.append(["Project type", project_type])
+    # User-controlled project details must remain literal text in Excel.
+    for cell_ref in ("B2", "B3"):
+        inputs[cell_ref].data_type = "s"
     inputs.append(["Currency", currency])
     inputs.append(["Project cost", project_cost])
     inputs.append(["Debt funding (%)", debt_pct])

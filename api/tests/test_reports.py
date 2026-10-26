@@ -1,5 +1,7 @@
 from io import BytesIO
 
+import pytest
+
 from openpyxl import load_workbook
 
 from app.reports import build_excel_report, build_pdf_report
@@ -175,3 +177,23 @@ def test_excel_readme_discloses_equal_principal_not_emi():
     assert "not an EMI schedule" in notes["A3"].value
     assert "not net profit" in notes["A4"].value
     assert "Edit yellow cells on Model Inputs" in notes["A5"].value
+
+@pytest.mark.parametrize(
+    ("field", "cell_ref", "formula_like_value"),
+    [
+        ("project_name", "B2", '=HYPERLINK("https://example.invalid","click")'),
+        ("project_type", "B3", "=1+1"),
+    ],
+)
+def test_excel_report_stores_user_project_text_as_literal_strings(
+    field, cell_ref, formula_like_value
+):
+    projection = sample_projection()
+    projection[field] = formula_like_value
+
+    workbook = workbook_for(projection)
+    cell = workbook["Model Inputs"][cell_ref]
+
+    assert cell.value == formula_like_value
+    assert cell.data_type == "s"
+
