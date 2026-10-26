@@ -97,7 +97,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
 
     summary.append(["KAAMKITPRO FINANCE | PROJECT SUMMARY"])
     summary.append(["Project", "='Model Inputs'!B2", "Project Type", "='Model Inputs'!B3"])
-    summary.append(["Currency", "='Model Inputs'!B4", "Projection Period (Years)", "='Model Inputs'!B13'])
+    summary.append(["Currency", "='Model Inputs'!B4", "Projection Period (Years)", "='Model Inputs'!B13"])
     summary.append(["Project Cost", "='Model Inputs'!B5", "Debt Funding", "='Model Inputs'!B5*'Model Inputs'!B6/100"])
     summary.append(["Equity Funding", "='Model Inputs'!B5*(1-'Model Inputs'!B6/100)", "Debt / Equity", '=IF(B5=0,"",D4/B5)'])
     summary.append([])
