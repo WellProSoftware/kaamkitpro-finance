@@ -4,4 +4,4 @@ compatibility_date = "2026-09-17"
 compatibility_flags = ["python_workers"]
 
 [vars]
-FINANCE_CORS_ORIGINS = "https://kaamkitpro-finance-staging.ankitkd550.workers.dev"
+FINANCE_CORS_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000"
