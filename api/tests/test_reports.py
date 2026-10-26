@@ -37,3 +37,32 @@ def test_excel_report_contains_formula_cells():
 def test_pdf_report_has_pdf_signature():
     content = build_pdf_report(sample_projection())
     assert content.startswith(b"%PDF")
+
+
+
+def test_excel_report_includes_debt_balance_columns():
+    content = build_excel_report({
+        **sample_projection(),
+        "annual_projection": [{
+            **sample_projection()["annual_projection"][0],
+            "opening_debt": 600000,
+            "closing_debt": 480000,
+            "profit_before_tax_before_depreciation": 234000,
+        }],
+    })
+    workbook = load_workbook(BytesIO(content), data_only=False)
+    sheet = workbook["Assumptions"]
+    assert sheet["B10"].value == 600000
+    assert sheet["L10"].value == 480000
+    assert sheet["M10"].value == "=F10-G10"
+
+
+def test_pdf_report_includes_debt_balance_data():
+    projection = sample_projection()
+    projection["annual_projection"][0].update({
+        "opening_debt": 600000,
+        "closing_debt": 480000,
+    })
+    content = build_pdf_report(projection)
+    assert content.startswith(b"%PDF")
+    assert len(content) > 1000
