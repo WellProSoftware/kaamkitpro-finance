@@ -91,9 +91,18 @@ def test_pdf_endpoint_rejects_invalid_assumptions():
     assert response.status_code == 422
 
 
-def test_projection_rejects_excessive_projection_years():
+def test_projection_accepts_more_than_ten_years():
     response = client.post(
         "/api/projection",
-        json={**payload(), "projection_years": 11},
+        json={**payload(), "projection_years": 25},
+    )
+    assert response.status_code == 200
+    assert len(response.json()["annual_projection"]) == 25
+
+
+def test_projection_rejects_more_than_one_hundred_years():
+    response = client.post(
+        "/api/projection",
+        json={**payload(), "projection_years": 101},
     )
     assert response.status_code == 422
