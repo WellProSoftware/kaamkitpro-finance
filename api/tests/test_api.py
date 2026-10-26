@@ -65,3 +65,11 @@ def test_rejects_invalid_debt_percentage():
 def test_rejects_negative_project_cost():
     response = client.post("/api/projection", json={**payload(), "project_cost": -1})
     assert response.status_code == 422
+
+
+def test_rejects_unreasonably_large_project_cost():
+    response = client.post(
+        "/api/projection",
+        json={**payload(), "project_cost": 1e16},
+    )
+    assert response.status_code == 422
