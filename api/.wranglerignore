@@ -1,8 +1,10 @@
-**/.venv/**
-**/.venv-workers/**
-**/__pycache__/**
-**/*.pyc
-**/tests/**
+# Exclude local and build environments from the deployed Worker bundle
+.venv/
+.venv-workers/
+python_modules/
+__pycache__/
+*.pyc
+tests/
 .python-version
 uv.lock
 pylock.toml
