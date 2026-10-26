@@ -65,3 +65,26 @@ def test_rejects_invalid_model_assumptions(key, value):
     data[key] = value
     with pytest.raises(ValueError):
         build_projection(data)
+
+
+def test_debt_schedule_reconciles_each_year():
+    result = build_projection(sample())
+    for row in result["annual_projection"]:
+        assert row["opening_debt"] - row["principal"] == row["closing_debt"]
+        assert row["interest"] + row["principal"] == row["debt_service"]
+
+
+def test_loan_is_fully_repaid_at_end_of_tenure():
+    data = sample()
+    data["projection_years"] = 7
+    result = build_projection(data)
+    rows = result["annual_projection"]
+    assert rows[4]["closing_debt"] == 0
+    assert rows[5]["interest"] == 0
+    assert rows[5]["principal"] == 0
+
+
+def test_pre_depreciation_profit_matches_ebitda_less_interest():
+    result = build_projection(sample())
+    for row in result["annual_projection"]:
+        assert row["profit_before_tax_before_depreciation"] == row["ebitda"] - row["interest"]
