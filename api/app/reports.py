@@ -65,6 +65,33 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
         inputs[cell].number_format = '"INR " #,##0.00'
     for cell in ("B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13"):
         inputs[cell].fill = PatternFill("solid", fgColor="FFF2CC")
+    # Guide spreadsheet users to valid assumptions before formulas recalculate.
+    from openpyxl.worksheet.datavalidation import DataValidation
+
+    validations = (
+        ("decimal", "between", "0", "100", "B6", "Debt funding must be between 0% and 100%."),
+        ("decimal", "between", "-100", "500", "B8", "Annual revenue growth must be between -100% and 500%."),
+        ("decimal", "between", "0", "100", "B9", "Variable cost must be between 0% and 100%."),
+        ("decimal", "between", "0", "100", "B11", "Annual interest rate must be between 0% and 100%."),
+        ("decimal", "greaterThanOrEqual", "0", None, "B5", "Project cost cannot be negative."),
+        ("decimal", "greaterThanOrEqual", "0", None, "B7", "Monthly revenue cannot be negative."),
+        ("decimal", "greaterThanOrEqual", "0", None, "B10", "Monthly fixed cost cannot be negative."),
+        ("whole", "between", "1", "30", "B12", "Loan term must be a whole number from 1 to 30 years."),
+        ("whole", "between", "1", "100", "B13", "Projection period must be a whole number from 1 to 100 years."),
+    )
+    for kind, operator, formula1, formula2, cell, message in validations:
+        validation = DataValidation(
+            type=kind, operator=operator, formula1=formula1, formula2=formula2,
+            allow_blank=False,
+        )
+        validation.errorTitle = "Invalid model input"
+        validation.error = message
+        validation.promptTitle = "Allowed input range"
+        validation.prompt = message
+        validation.showErrorMessage = True
+        validation.showInputMessage = True
+        inputs.add_data_validation(validation)
+        validation.add(inputs[cell])
     inputs.column_dimensions["A"].width = 30
     inputs.column_dimensions["B"].width = 24
     inputs.freeze_panes = "A2"
