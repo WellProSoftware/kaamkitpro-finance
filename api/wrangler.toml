@@ -11,8 +11,4 @@ exclude = [
   "**/*.pyc",
   "**/__pycache__",
   "reportlab/fonts/*.sfd",
-  "PIL/**",
-  "pillow/**",
-  "**/PIL/**",
-  "**/pillow/**",
 ]
