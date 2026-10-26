@@ -1,9 +1,11 @@
 from fastapi import FastAPI
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from .model import build_projection
+from .reports import build_excel_report, build_pdf_report
 
-app = FastAPI(title="Professional Projection Software API", version="0.1.0")
+app = FastAPI(title="Professional Projection Software API", version="0.2.0")
 
 
 class ProjectionInput(BaseModel):
@@ -20,14 +22,38 @@ class ProjectionInput(BaseModel):
     projection_years: int = Field(default=5, ge=1, le=10)
 
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-
-
-@app.post("/api/projection")
-def projection(data: ProjectionInput):
+def make_projection(data: ProjectionInput) -> dict:
     result = build_projection(data.model_dump())
     result["project_name"] = data.project_name
     result["project_type"] = data.project_type
     return result
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "service": "kaamkitpro-finance-api"}
+
+
+@app.post("/api/projection")
+def projection(data: ProjectionInput):
+    return make_projection(data)
+
+
+@app.post("/api/reports/excel")
+def excel_report(data: ProjectionInput):
+    result = make_projection(data)
+    return Response(
+        content=build_excel_report(result),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="kaamkitpro-finance-projection.xlsx"'},
+    )
+
+
+@app.post("/api/reports/pdf")
+def pdf_report(data: ProjectionInput):
+    result = make_projection(data)
+    return Response(
+        content=build_pdf_report(result),
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="kaamkitpro-finance-projection.pdf"'},
+    )
