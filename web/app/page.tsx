@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Inputs = {
   projectName: string;
@@ -37,6 +37,42 @@ const money = (value: number) => new Intl.NumberFormat("en-IN", {
 export default function Home() {
   const [inputs, setInputs] = useState<Inputs>(initial);
   const [saved, setSaved] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("kaamkitpro-finance-draft");
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          const draft = parsed as Partial<Inputs>;
+          const validNumber = (value: unknown): value is number =>
+            typeof value === "number" && Number.isFinite(value);
+          if (
+            typeof draft.projectName === "string" &&
+            typeof draft.projectType === "string" &&
+            validNumber(draft.projectCost) && draft.projectCost >= 0 &&
+            validNumber(draft.debtPct) && draft.debtPct >= 0 && draft.debtPct <= 100 &&
+            validNumber(draft.monthlyRevenue) && draft.monthlyRevenue >= 0 &&
+            validNumber(draft.growthPct) && draft.growthPct >= -100 && draft.growthPct <= 500 &&
+            validNumber(draft.variableCostPct) && draft.variableCostPct >= 0 && draft.variableCostPct <= 100 &&
+            validNumber(draft.monthlyFixedCost) && draft.monthlyFixedCost >= 0 &&
+            validNumber(draft.interestPct) && draft.interestPct >= 0 && draft.interestPct <= 100 &&
+            validNumber(draft.loanYears) && Number.isInteger(draft.loanYears) && draft.loanYears >= 1 && draft.loanYears <= 30 &&
+            validNumber(draft.projectionYears) && Number.isInteger(draft.projectionYears) && draft.projectionYears >= 1 && draft.projectionYears <= 100
+          ) {
+            setInputs({ ...initial, ...draft });
+            setSaved(true);
+          }
+        }
+      }
+    } catch {
+      // Ignore unavailable storage or invalid draft data and keep safe defaults.
+    } finally {
+      setDraftLoaded(true);
+    }
+  }, []);
+
   const update = (key: keyof Inputs, value: string) => {
     const numeric = ["projectCost","debtPct","monthlyRevenue","growthPct","variableCostPct","monthlyFixedCost","interestPct","loanYears","projectionYears"].includes(key);
     setInputs((prev) => ({ ...prev, [key]: numeric ? Number(value) : value }));
@@ -103,7 +139,7 @@ export default function Home() {
 
       <div className="grid">
         <section className="card">
-          <h2 className="section-title">Project assumptions</h2><p className="section-desc">Change any input to recalculate the projection instantly. Figures are in Indian rupees.</p>
+          <h2 className="section-title">Project assumptions</h2><p className="section-desc">Change any input to recalculate the projection instantly. Figures are in Indian rupees. Drafts stay in this browser.</p>
           <div className="fields">
             <div className="field full"><label htmlFor="projectName">Project name</label><input id="projectName" value={inputs.projectName} onChange={(e) => update("projectName", e.target.value)} maxLength={120}/></div>
             <div className="field full"><label htmlFor="projectType">Business type</label><select id="projectType" value={inputs.projectType} onChange={(e) => update("projectType", e.target.value)}>{["Hospital","Pharmacy","Optical","Retail","Warehouse","Manufacturing","Services","Other"].map(x=><option key={x}>{x}</option>)}</select></div>
@@ -118,7 +154,7 @@ export default function Home() {
             <div className="field"><label htmlFor="projectionYears">Projection period (years, up to 100)</label><input id="projectionYears" type="number" min="1" max="100" step="1" value={inputs.projectionYears} onChange={(e) => update("projectionYears", e.target.value)}/></div>
           </div>
           <button className="primary" onClick={saveAssumptions}>Save project draft on this device</button>
-          {saved && <p className="section-desc" role="status" style={{marginTop:10,marginBottom:0}}>Draft saved in this browser only. Account sync is not connected yet.</p>}
+          {draftLoaded && saved && <p className="section-desc" role="status" style={{marginTop:10,marginBottom:0}}>Draft restored or saved in this browser only. Account sync is not connected yet.</p>}
         </section>
 
         <section>
