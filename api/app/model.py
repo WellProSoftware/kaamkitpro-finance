@@ -56,6 +56,7 @@ def build_projection(data: dict) -> dict:
         interest = opening_debt * interest_rate if year <= loan_years else 0
         principal = min(opening_debt, annual_principal) if year <= loan_years else 0
         debt_service = interest + principal
+        closing_debt = max(0, opening_debt - principal)
 
         results.append({
             "year": year,
@@ -65,6 +66,10 @@ def build_projection(data: dict) -> dict:
             "ebitda": round(ebitda, 2),
             "interest": round(interest, 2),
             "principal": round(principal, 2),
+            "opening_debt": round(opening_debt, 2),
+            "closing_debt": round(closing_debt, 2),
+            "debt_service": round(debt_service, 2),
+            "profit_before_tax_before_depreciation": round(ebitda - interest, 2),
             "dscr": round(ebitda / debt_service, 2) if debt_service else None,
             "break_even_revenue": round(fixed_cost / (1 - variable_rate), 2) if variable_rate < 1 else None,
             "cash_after_debt_service": round(ebitda - debt_service, 2),
@@ -76,5 +81,9 @@ def build_projection(data: dict) -> dict:
         "debt": round(debt, 2),
         "equity": round(equity, 2),
         "annual_projection": results,
+        "debt_schedule": [
+            {"year": row["year"], "opening_balance": row["opening_debt"], "principal_repayment": row["principal"], "interest_payment": row["interest"], "total_debt_service": row["debt_service"], "closing_balance": row["closing_debt"]}
+            for row in results
+        ],
         "note": "Illustrative projection; validate assumptions and full cash flows before bank submission.",
     }
