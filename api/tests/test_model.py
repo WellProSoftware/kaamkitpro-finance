@@ -22,3 +22,26 @@ def test_projection_year_count():
 
 def test_break_even_is_positive():
     assert build_projection(sample())["annual_projection"][0]["break_even_revenue"] > 0
+
+
+def test_zero_debt_has_no_dscr_when_no_debt_service():
+    data = sample()
+    data["debt_pct"] = 0
+    result = build_projection(data)
+    assert result["debt"] == 0
+    assert all(row["dscr"] is None for row in result["annual_projection"])
+
+
+def test_full_variable_cost_does_not_divide_by_zero():
+    data = sample()
+    data["variable_cost_pct"] = 100
+    result = build_projection(data)
+    assert all(row["break_even_revenue"] is None for row in result["annual_projection"])
+
+
+def test_growth_of_minus_100_percent_keeps_revenue_non_negative():
+    data = sample()
+    data["growth_pct"] = -100
+    result = build_projection(data)
+    assert result["annual_projection"][0]["revenue"] > 0
+    assert all(row["revenue"] >= 0 for row in result["annual_projection"])
