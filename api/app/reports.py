@@ -81,48 +81,62 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
 
 
 def build_pdf_report(projection: dict[str, Any]) -> bytes:
-    """Return a compact PDF summary with annual debt balances."""
-    output = BytesIO()
-    doc = SimpleDocTemplate(output, pagesize=landscape(A4), rightMargin=22, leftMargin=22, topMargin=28, bottomMargin=28)
-    styles = getSampleStyleSheet()
-    story = [
-        Paragraph("KaamKitPro Finance - Project Projection", styles["Title"]),
-        Spacer(1, 8),
-        Paragraph(f"Project: {projection.get('project_name', 'New Project')} | Type: {projection.get('project_type', 'Other')} | Currency: INR", styles["Normal"]),
-        Spacer(1, 8),
-        Paragraph(f"Project cost: ₹{projection.get('project_cost', 0):,.0f} | Debt: ₹{projection.get('debt', 0):,.0f} | Equity: ₹{projection.get('equity', 0):,.0f}", styles["Normal"]),
-        Spacer(1, 14),
+    """Return a compact PDF summary using built-in PDF drawing commands."""
+    # Avoid a large PDF dependency in the constrained Cloudflare Python Worker.
+    lines = [
+        "KaamKitPro Finance - Project Projection",
+        f"Project: {projection.get('project_name', 'New Project')} | Type: {projection.get('project_type', 'Other')} | Currency: {projection.get('currency', 'INR')}",
+        f"Project cost: INR {projection.get('project_cost', 0):,.0f} | Debt: INR {projection.get('debt', 0):,.0f} | Equity: INR {projection.get('equity', 0):,.0f}",
+        "",
+        "Year | Opening debt | Revenue | Variable cost | Fixed cost | EBITDA | Interest | Principal | Closing debt | DSCR | Cash after debt",
     ]
-    data = [["Year", "Opening debt", "Revenue", "Variable cost", "Fixed cost", "EBITDA", "Interest", "Principal", "Closing debt", "DSCR", "Cash after debt"]]
     for row in projection.get("annual_projection", []):
-        data.append([
-            str(row.get("year", "")),
-            f"{row.get('opening_debt', 0):,.0f}",
-            f"{row.get('revenue', 0):,.0f}",
-            f"{row.get('variable_cost', 0):,.0f}",
-            f"{row.get('fixed_cost', 0):,.0f}",
-            f"{row.get('ebitda', 0):,.0f}",
-            f"{row.get('interest', 0):,.0f}",
-            f"{row.get('principal', 0):,.0f}",
-            f"{row.get('closing_debt', 0):,.0f}",
-            "-" if row.get("dscr") is None else f"{row['dscr']:.2f}x",
-            f"{row.get('cash_after_debt_service', 0):,.0f}",
-        ])
-    table = Table(data, repeatRows=1)
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#173D93")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 7),
-        ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#DCE4EF")),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F4F7FB")]),
-        ("ALIGN", (1, 1), (-1, -1), "RIGHT"),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-    ]))
-    story.extend([table, Spacer(1, 12), Paragraph(
-        "Disclaimer: Illustrative planning estimate only. Loan repayment uses equal annual principal, not EMI; interest is calculated on opening balance. Profit before tax indicator is before depreciation and tax, not net profit. This is not an audited statement, loan approval, or bank-approved DPR. Validate assumptions, tax, working capital, depreciation and loan amortisation before external use.",
-        styles["Italic"],
-    )])
-    doc.build(story)
-    return output.getvalue()
+        dscr = "-" if row.get("dscr") is None else f"{row['dscr']:.2f}x"
+        lines.append(
+            f"{row.get('year', '')} | {row.get('opening_debt', 0):,.0f} | "
+            f"{row.get('revenue', 0):,.0f} | {row.get('variable_cost', 0):,.0f} | "
+            f"{row.get('fixed_cost', 0):,.0f} | {row.get('ebitda', 0):,.0f} | "
+            f"{row.get('interest', 0):,.0f} | {row.get('principal', 0):,.0f} | "
+            f"{row.get('closing_debt', 0):,.0f} | {dscr} | "
+            f"{row.get('cash_after_debt_service', 0):,.0f}"
+        )
+    lines.extend([
+        "",
+        "Disclaimer: Illustrative planning estimate only. Equal annual principal repayment is used, not EMI.",
+        "Interest is calculated on opening balance. Profit before tax is before depreciation and tax.",
+        "This is not an audited statement, loan approval, or bank-approved DPR. Validate assumptions before use.",
+    ])
+
+    # Standard PDF 1.4: one page, built-in Helvetica font, ASCII-safe content.
+    def pdf_escape(value: str) -> str:
+        value = value.encode("ascii", "replace").decode("ascii")
+        return value.replace("\\\\", "\\\\\\\\").replace("(", "\\\\(").replace(")", "\\\\)")
+
+    commands = ["BT", "/F1 7 Tf", "32 560 Td", "10 TL"]
+    for index, line in enumerate(lines):
+        if index:
+            commands.append("T*")
+        commands.append(f"({pdf_escape(line[:180])}) Tj")
+    commands.append("ET")
+    stream = "\\n".join(commands).encode("ascii")
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        b"<< /Length " + str(len(stream)).encode("ascii") + b" >>\\nstream\\n" + stream + b"\\nendstream",
+    ]
+    output = bytearray(b"%PDF-1.4\\n%\\xe2\\xe3\\xcf\\xd3\\n")
+    offsets = [0]
+    for number, obj in enumerate(objects, start=1):
+        offsets.append(len(output))
+        output.extend(f"{number} 0 obj\\n".encode("ascii") + obj + b"\\nendobj\\n")
+    xref_offset = len(output)
+    output.extend(f"xref\\n0 {len(offsets)}\\n".encode("ascii"))
+    output.extend(b"0000000000 65535 f \\n")
+    for offset in offsets[1:]:
+        output.extend(f"{offset:010d} 00000 n \\n".encode("ascii"))
+    output.extend(
+        f"trailer\\n<< /Size {len(offsets)} /Root 1 0 R >>\\nstartxref\\n{xref_offset}\\n%%EOF".encode("ascii")
+    )
+    return bytes(output)
