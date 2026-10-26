@@ -115,7 +115,7 @@ export default function Home() {
             <div className="field"><label htmlFor="monthlyFixedCost">Monthly fixed costs (₹)</label><div className="input-wrap"><span>₹</span><input id="monthlyFixedCost" type="number" min="0" value={inputs.monthlyFixedCost} onChange={(e) => update("monthlyFixedCost", e.target.value)}/></div></div>
             <div className="field"><label htmlFor="interestPct">Annual interest rate (%)</label><input id="interestPct" type="number" min="0" max="100" value={inputs.interestPct} onChange={(e) => update("interestPct", e.target.value)}/></div>
             <div className="field"><label htmlFor="loanYears">Loan tenure (years)</label><input id="loanYears" type="number" min="1" max="30" value={inputs.loanYears} onChange={(e) => update("loanYears", e.target.value)}/></div>
-            <div className="field"><label htmlFor="projectionYears">Projection period (years)</label><select id="projectionYears" value={inputs.projectionYears} onChange={(e) => update("projectionYears", e.target.value)}>{[3,5,7,10].map(x=><option key={x} value={x}>{x} years</option>)}</select></div>
+            <div className="field"><label htmlFor="projectionYears">Projection period (years, up to 100)</label><input id="projectionYears" type="number" min="1" max="100" step="1" value={inputs.projectionYears} onChange={(e) => update("projectionYears", e.target.value)}/></div>
           </div>
           <button className="primary" onClick={saveAssumptions}>Save project draft on this device</button>
           {saved && <p className="section-desc" role="status" style={{marginTop:10,marginBottom:0}}>Draft saved in this browser only. Account sync is not connected yet.</p>}
