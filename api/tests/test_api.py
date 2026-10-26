@@ -106,3 +106,28 @@ def test_projection_rejects_more_than_one_hundred_years():
         json={**payload(), "projection_years": 101},
     )
     assert response.status_code == 422
+
+
+def test_cors_allows_local_frontend_origin():
+    response = client.options(
+        "/api/projection",
+        headers={
+            "Origin": "http://localhost:3000",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
+
+
+def test_cors_does_not_allow_unconfigured_origin():
+    response = client.options(
+        "/api/projection",
+        headers={
+            "Origin": "https://untrusted.example",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+    assert "access-control-allow-origin" not in response.headers
