@@ -68,3 +68,11 @@ def test_pdf_report_includes_debt_balance_data():
     content = build_pdf_report(projection)
     assert content.startswith(b"%PDF")
     assert len(content) > 1000
+
+
+def test_excel_readme_discloses_equal_principal_not_emi():
+    content = build_excel_report(sample_projection())
+    workbook = load_workbook(BytesIO(content), data_only=False)
+    notes = workbook["Read Me"]
+    assert "not an EMI schedule" in notes["A3"].value
+    assert "not net profit" in notes["A4"].value
