@@ -47,7 +47,7 @@ export default function Home() {
     const debt = inputs.projectCost * inputs.debtPct / 100;
     const equity = inputs.projectCost - debt;
     const variableRate = Math.min(100, Math.max(0, inputs.variableCostPct)) / 100;
-    const rows = Array.from({ length: Math.max(1, Math.min(10, inputs.projectionYears || 1)) }, (_, i) => {
+    const rows = Array.from({ length: Math.max(1, Math.min(100, inputs.projectionYears || 1)) }, (_, i) => {
       const year = i + 1;
       const revenue = inputs.monthlyRevenue * 12 * Math.pow(1 + inputs.growthPct / 100, i);
       const variableCost = revenue * variableRate;
