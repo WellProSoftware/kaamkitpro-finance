@@ -54,3 +54,53 @@ jobs:
           python -c 'import json; d=json.load(open("/tmp/finance-health.json")); assert d["status"] == "ok"; assert d["service"] == "kaamkitpro-finance-api"'
           curl --fail --silent http://127.0.0.1:18000/docs >/dev/null
           echo "Container health and API docs smoke tests passed."
+
+  cloudflare-python-workers-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install Cloudflare Python Worker dependencies
+        working-directory: api
+        run: uv sync
+      - name: Preview Worker and smoke test API plus report exports
+        working-directory: api
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pywrangler dev --ip 127.0.0.1 --port 8787 > /tmp/finance-worker-preview.log 2>&1 &
+          worker_pid=$!
+          cleanup() {
+            kill "$worker_pid" >/dev/null 2>&1 || true
+            cat /tmp/finance-worker-preview.log || true
+          }
+          trap cleanup EXIT
+          ready=0
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:8787/health >/tmp/finance-worker-health.json; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" -eq 1
+          python -c 'import json; d=json.load(open("/tmp/finance-worker-health.json")); assert d["status"] == "ok"'
+          curl --fail --silent http://127.0.0.1:8787/docs >/dev/null
+          payload='{"project_name":"CI staging smoke test","project_type":"Other","project_cost":100000,"debt_pct":50,"monthly_revenue":20000,"growth_pct":5,"variable_cost_pct":45,"monthly_fixed_cost":5000,"interest_pct":11,"loan_years":7,"projection_years":2}'
+          curl --fail --silent -H 'Content-Type: application/json' -d "$payload" http://127.0.0.1:8787/api/projection > /tmp/finance-worker-projection.json
+          python -c 'import json; d=json.load(open("/tmp/finance-worker-projection.json")); assert len(d["annual_projection"]) == 2'
+          curl --fail --silent -D /tmp/finance-xlsx-headers.txt -H 'Content-Type: application/json' -d "$payload" http://127.0.0.1:8787/api/reports/excel -o /tmp/finance-worker-report.xlsx
+          grep -qi 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' /tmp/finance-xlsx-headers.txt
+          python -c 'from openpyxl import load_workbook; w=load_workbook("/tmp/finance-worker-report.xlsx", read_only=True); assert "Assumptions" in w.sheetnames'
+          curl --fail --silent -D /tmp/finance-pdf-headers.txt -H 'Content-Type: application/json' -d "$payload" http://127.0.0.1:8787/api/reports/pdf -o /tmp/finance-worker-report.pdf
+          grep -qi 'application/pdf' /tmp/finance-pdf-headers.txt
+          python -c 'from pypdf import PdfReader; import sys; r=PdfReader("/tmp/finance-worker-report.pdf"); assert len(r.pages) >= 1' || python -c 'from pathlib import Path; b=Path("/tmp/finance-worker-report.pdf").read_bytes(); assert b.startswith(b"%PDF-") and b"KaamKitPro Finance" in b'
+          echo "Cloudflare Python Worker preview health, projection, XLSX, and PDF smoke tests passed."
