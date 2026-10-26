@@ -77,8 +77,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
 
 
 def build_pdf_report(projection: dict[str, Any]) -> bytes:
-    """Return a compact PDF summary using built-in PDF drawing commands."""
-    # Avoid a large PDF dependency in the constrained Cloudflare Python Worker.
+    """Return a compact, valid PDF summary using built-in PDF drawing commands."""
     lines = [
         "KaamKitPro Finance - Project Projection",
         f"Project: {projection.get('project_name', 'New Project')} | Type: {projection.get('project_type', 'Other')} | Currency: {projection.get('currency', 'INR')}",
@@ -103,36 +102,36 @@ def build_pdf_report(projection: dict[str, Any]) -> bytes:
         "This is not an audited statement, loan approval, or bank-approved DPR. Validate assumptions before use.",
     ])
 
-    # Standard PDF 1.4: one page, built-in Helvetica font, ASCII-safe content.
     def pdf_escape(value: str) -> str:
         value = value.encode("ascii", "replace").decode("ascii")
-        return value.replace("\\\\", "\\\\\\\\").replace("(", "\\\\(").replace(")", "\\\\)")
+        return value.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
+    # Keep the report legible and inside the page by using a small font and one line per row.
     commands = ["BT", "/F1 7 Tf", "32 560 Td", "10 TL"]
     for index, line in enumerate(lines):
         if index:
             commands.append("T*")
         commands.append(f"({pdf_escape(line[:180])}) Tj")
     commands.append("ET")
-    stream = "\\n".join(commands).encode("ascii")
+    stream = "\n".join(commands).encode("ascii")
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
         b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-        b"<< /Length " + str(len(stream)).encode("ascii") + b" >>\\nstream\\n" + stream + b"\\nendstream",
+        b"<< /Length " + str(len(stream)).encode("ascii") + b" >>\nstream\n" + stream + b"\nendstream",
     ]
-    output = bytearray(b"%PDF-1.4\\n%\\xe2\\xe3\\xcf\\xd3\\n")
+    output = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
     offsets = [0]
     for number, obj in enumerate(objects, start=1):
         offsets.append(len(output))
-        output.extend(f"{number} 0 obj\\n".encode("ascii") + obj + b"\\nendobj\\n")
+        output.extend(f"{number} 0 obj\n".encode("ascii") + obj + b"\nendobj\n")
     xref_offset = len(output)
-    output.extend(f"xref\\n0 {len(offsets)}\\n".encode("ascii"))
-    output.extend(b"0000000000 65535 f \\n")
+    output.extend(f"xref\n0 {len(offsets)}\n".encode("ascii"))
+    output.extend(b"0000000000 65535 f \n")
     for offset in offsets[1:]:
-        output.extend(f"{offset:010d} 00000 n \\n".encode("ascii"))
+        output.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
     output.extend(
-        f"trailer\\n<< /Size {len(offsets)} /Root 1 0 R >>\\nstartxref\\n{xref_offset}\\n%%EOF".encode("ascii")
+        f"trailer\n<< /Size {len(offsets)} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n".encode("ascii")
     )
     return bytes(output)
