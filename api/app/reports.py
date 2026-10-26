@@ -121,7 +121,7 @@ def build_pdf_report(projection: dict[str, Any]) -> bytes:
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
     ]))
     story.extend([table, Spacer(1, 12), Paragraph(
-        "Disclaimer: Illustrative planning estimate only. Profit before tax indicator is before depreciation and tax, not net profit. This is not an audited statement, loan approval, or bank-approved DPR. Validate assumptions, tax, working capital, depreciation and loan amortisation before external use.",
+        "Disclaimer: Illustrative planning estimate only. Loan repayment uses equal annual principal, not EMI; interest is calculated on opening balance. Profit before tax indicator is before depreciation and tax, not net profit. This is not an audited statement, loan approval, or bank-approved DPR. Validate assumptions, tax, working capital, depreciation and loan amortisation before external use.",
         styles["Italic"],
     )])
     doc.build(story)
