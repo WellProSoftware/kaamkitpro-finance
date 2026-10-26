@@ -33,7 +33,24 @@ Do not connect a custom production domain. Keep the existing Cloudflare Finance 
 
 ## Environment variables and secrets
 
+Set `FINANCE_CORS_ORIGINS` to the exact HTTPS origin of the staging frontend, for example `https://<your-finance-staging-frontend-host>`. Do not include paths, do not use `*`, and do not include the production website unless it is explicitly approved. Local development defaults are `http://localhost:3000` and `http://127.0.0.1:3000`.
+
 The current API does not require Supabase keys for calculation or report export. Do not add service-role keys to the container. Supabase project persistence and authenticated access are separate follow-up tasks.
+
+## Financial-model interpretation
+
+The current loan schedule uses equal annual principal repayments, with interest calculated on the opening balance. It is not a monthly EMI schedule. The profit-before-tax indicator is EBITDA less interest and excludes depreciation and tax; do not present it as net profit. These are planning estimates, not audited financial statements or bank-approved DPRs.
+
+## Staging smoke-test sequence
+
+After deploying the API to its dedicated staging host, record the staging API base URL and check the following without changing DNS or the existing production Worker:
+
+1. Open `<staging-api-url>/health` and confirm the JSON status is `ok`.
+2. Open `<staging-api-url>/docs` and confirm the API schema loads.
+3. Submit a small sample payload to `/api/projection`; confirm the number of annual rows matches `projection_years` and debt balances reconcile.
+4. Request `/api/reports/excel` and `/api/reports/pdf`; download and open both files.
+5. From the staging frontend, confirm requests work only after setting the exact frontend origin in `FINANCE_CORS_ORIGINS`.
+6. Record results and logs before treating staging as verified.
 
 ## Go-live gate
 
