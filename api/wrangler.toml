@@ -1,0 +1,7 @@
+name = "kaamkitpro-finance-api-staging"
+main = "worker.py"
+compatibility_date = "2026-09-17"
+compatibility_flags = ["python_workers"]
+
+[vars]
+FINANCE_CORS_ORIGINS = "https://kaamkitpro-finance-staging.ankitkd550.workers.dev"
