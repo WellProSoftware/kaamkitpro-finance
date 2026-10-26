@@ -81,6 +81,45 @@ def test_excel_model_inputs_drive_projection_and_summary_formulas():
     assert summary["F8"].value == '=IF($A8="","",\'Assumptions\'!K10)'
 
 
+
+def test_excel_model_inputs_have_range_validation_and_clear_errors():
+    workbook = workbook_for()
+    inputs = workbook["Model Inputs"]
+    validations = {
+        cell: validation
+        for validation in inputs.data_validations.dataValidation
+        for cell in validation.cells
+    }
+
+    expected = {
+        "B5": ("decimal", "greaterThanOrEqual", "0"),
+        "B6": ("decimal", "between", "0"),
+        "B7": ("decimal", "greaterThanOrEqual", "0"),
+        "B8": ("decimal", "between", "-100"),
+        "B9": ("decimal", "between", "0"),
+        "B10": ("decimal", "greaterThanOrEqual", "0"),
+        "B11": ("decimal", "between", "0"),
+        "B12": ("whole", "between", "1"),
+        "B13": ("whole", "between", "1"),
+    }
+    for cell, (kind, operator, formula1) in expected.items():
+        assert cell in validations
+        validation = validations[cell]
+        assert validation.type == kind
+        assert validation.operator == operator
+        assert validation.formula1 == formula1
+        assert validation.showErrorMessage is True
+        assert validation.errorTitle == "Invalid model input"
+        assert validation.error
+
+    assert validations["B6"].formula2 == "100"
+    assert validations["B8"].formula2 == "500"
+    assert validations["B9"].formula2 == "100"
+    assert validations["B11"].formula2 == "100"
+    assert validations["B12"].formula2 == "30"
+    assert validations["B13"].formula2 == "100"
+
+
 def test_excel_forecast_has_debt_repayment_and_zero_debt_service_handling():
     workbook = workbook_for()
     sheet = workbook["Assumptions"]
