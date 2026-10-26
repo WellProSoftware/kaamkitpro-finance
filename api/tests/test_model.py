@@ -1,0 +1,24 @@
+from app.model import build_projection
+
+
+def sample():
+    return {
+        "project_name": "Sample Pharmacy", "project_type": "Pharmacy",
+        "project_cost": 10_000_000, "debt_pct": 50,
+        "monthly_revenue": 1_500_000, "growth_pct": 5,
+        "variable_cost_pct": 60, "monthly_fixed_cost": 300_000,
+        "interest_pct": 10, "loan_years": 5, "projection_years": 5,
+    }
+
+
+def test_debt_and_equity_equal_project_cost():
+    result = build_projection(sample())
+    assert result["debt"] + result["equity"] == result["project_cost"]
+
+
+def test_projection_year_count():
+    assert len(build_projection(sample())["annual_projection"]) == 5
+
+
+def test_break_even_is_positive():
+    assert build_projection(sample())["annual_projection"][0]["break_even_revenue"] > 0
