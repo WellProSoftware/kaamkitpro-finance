@@ -66,12 +66,13 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     note = wb.create_sheet("Read Me")
     note.append(["Important limitations"])
     note.append(["This workbook is an early planning estimate, not an audited financial statement or bank-approved DPR."])
+    note.append(["Loan schedule uses equal annual principal repayments with interest calculated on opening balance; it is not an EMI schedule."])
     note.append(["Profit before tax shown here is before depreciation and tax; it is not net profit."])
     note.append(["Review assumptions and formulas with a qualified finance professional before submitting to a lender."])
     note.column_dimensions["A"].width = 115
     note["A1"].font = Font(bold=True, color="FFFFFF")
     note["A1"].fill = PatternFill("solid", fgColor="173D93")
-    for cell in ("A2", "A3", "A4"):
+    for cell in ("A2", "A3", "A4", "A5"):
         note[cell].alignment = Alignment(wrap_text=True)
 
     output = BytesIO()
