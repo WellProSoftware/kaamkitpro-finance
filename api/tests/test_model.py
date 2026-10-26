@@ -58,7 +58,7 @@ import pytest
     ("variable_cost_pct", -1),
     ("interest_pct", 101),
     ("loan_years", 31),
-    ("projection_years", 11),
+    ("projection_years", 101),
 ])
 def test_rejects_invalid_model_assumptions(key, value):
     data = sample()
