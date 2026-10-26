@@ -48,10 +48,10 @@ def workbook_for(projection=None):
 def test_excel_report_contains_formula_cells():
     workbook = workbook_for()
     sheet = workbook["Assumptions"]
-    assert sheet["F10"].value == "=C10-D10-E10"
-    assert sheet["I10"].value == "=G10+H10"
+    assert sheet["F10"].value == '=IF(A10="","",C10-D10-E10)'
+    assert sheet["I10"].value == '=IF(A10="","",G10+H10)'
     assert sheet["J10"].value == '=IF(OR(A10="",I10=0),"",F10/I10)'
-    assert sheet["M10"].value == "=F10-G10"
+    assert sheet["M10"].value == '=IF(A10="","",F10-G10)'
 
 
 def test_excel_model_inputs_drive_projection_and_summary_formulas():
@@ -88,7 +88,7 @@ def test_excel_forecast_has_debt_repayment_and_zero_debt_service_handling():
     assert "MAX(0,$B$6-(A10-1)*$B$6/'Model Inputs'!$B$12)" in sheet["B10"].value
     assert "MIN(B10,$B$6/'Model Inputs'!$B$12)" in sheet["H10"].value
     assert "MAX(0,B10-H10)" in sheet["L10"].value
-    assert 'IF(OR(A10="",I10=0),"",F10/I10)' == sheet["J10"].value
+    assert '=IF(OR(A10="",I10=0),"",F10/I10)' == sheet["J10"].value
     assert sheet["A109"].value.endswith(',"")')
     assert sheet["C109"].value.startswith('=IF(A109="","",')
 
