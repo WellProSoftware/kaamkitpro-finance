@@ -38,6 +38,8 @@ export default function Home() {
   const [inputs, setInputs] = useState<Inputs>(initial);
   const [saved, setSaved] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const [exportStatus, setExportStatus] = useState("");
+  const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
 
   useEffect(() => {
     try {
@@ -116,6 +118,61 @@ export default function Home() {
     URL.revokeObjectURL(link.href);
   };
 
+  const exportReport = async (format: "excel" | "pdf") => {
+    const apiBase = process.env.NEXT_PUBLIC_FINANCE_API_URL?.trim().replace(/\/$/, "");
+    if (!apiBase) {
+      setExportStatus("Excel/PDF export is ready to connect, but the staging API URL is not configured yet. CSV export remains available.");
+      return;
+    }
+
+    setExporting(format);
+    setExportStatus("");
+    const payload = {
+      project_name: inputs.projectName,
+      project_type: inputs.projectType,
+      project_cost: inputs.projectCost,
+      debt_pct: inputs.debtPct,
+      monthly_revenue: inputs.monthlyRevenue,
+      growth_pct: inputs.growthPct,
+      variable_cost_pct: inputs.variableCostPct,
+      monthly_fixed_cost: inputs.monthlyFixedCost,
+      interest_pct: inputs.interestPct,
+      loan_years: inputs.loanYears,
+      projection_years: inputs.projectionYears,
+    };
+
+    try {
+      const response = await fetch(`${apiBase}/api/reports/${format}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        throw new Error(response.status === 422
+          ? "Please review the assumptions. The API rejected one or more values."
+          : `Report service returned HTTP ${response.status}.`);
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = format === "excel"
+        ? "kaamkitpro-finance-projection.xlsx"
+        : "kaamkitpro-finance-projection.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setExportStatus(`${format === "excel" ? "Excel" : "PDF"} report downloaded.`);
+    } catch (error) {
+      setExportStatus(error instanceof Error
+        ? `Export failed: ${error.message}`
+        : "Export failed. Check the staging API configuration and try again.");
+    } finally {
+      setExporting(null);
+    }
+  };
+
   const saveAssumptions = () => {
     try {
       localStorage.setItem("kaamkitpro-finance-draft", JSON.stringify(inputs));
@@ -134,7 +191,7 @@ export default function Home() {
 
       <section className="hero">
         <div><div className="eyebrow">Financial planning workspace</div><h1>Turn your project into a clear financial plan.</h1><p>Build a practical first-pass projection for a hospital, pharmacy, optical store, retail business, warehouse or manufacturing project.</p></div>
-        <div className="actions"><button className="secondary" onClick={saveAssumptions}>Save draft</button><button className="secondary" onClick={exportCsv}>Export CSV</button></div>
+        <div className="actions"><button className="secondary" onClick={saveAssumptions}>Save draft</button><button className="secondary" onClick={exportCsv}>Export CSV</button><button className="secondary" onClick={() => void exportReport("excel")} disabled={exporting !== null}>{exporting === "excel" ? "Preparing Excel…" : "Export Excel"}</button><button className="secondary" onClick={() => void exportReport("pdf")} disabled={exporting !== null}>{exporting === "pdf" ? "Preparing PDF…" : "Export PDF"}</button></div>
       </section>
 
       <div className="grid">
@@ -174,6 +231,7 @@ export default function Home() {
           </div>
         </section>
       </div>
+      {exportStatus && <p className="section-desc" role="status" aria-live="polite">{exportStatus}</p>}
       <p className="footer">KaamKitPro Finance · Early staging build · Not a bank-approved DPR or lending recommendation.</p>
     </main>
   );
