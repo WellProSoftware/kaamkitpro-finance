@@ -45,3 +45,23 @@ def test_growth_of_minus_100_percent_keeps_revenue_non_negative():
     result = build_projection(data)
     assert result["annual_projection"][0]["revenue"] > 0
     assert all(row["revenue"] >= 0 for row in result["annual_projection"])
+
+
+import pytest
+
+
+@pytest.mark.parametrize("key,value", [
+    ("project_cost", float("nan")),
+    ("monthly_revenue", float("inf")),
+    ("monthly_fixed_cost", -1),
+    ("debt_pct", 101),
+    ("variable_cost_pct", -1),
+    ("interest_pct", 101),
+    ("loan_years", 31),
+    ("projection_years", 11),
+])
+def test_rejects_invalid_model_assumptions(key, value):
+    data = sample()
+    data[key] = value
+    with pytest.raises(ValueError):
+        build_projection(data)
