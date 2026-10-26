@@ -2,6 +2,12 @@ name: Finance API CI
 
 on:
   workflow_dispatch:
+    inputs:
+      deploy_staging_api:
+        description: "Deploy only the separate kaamkitpro-finance-api-staging Worker"
+        required: true
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -109,3 +115,31 @@ jobs:
           grep -qi 'application/pdf' /tmp/finance-pdf-headers.txt
           uv run python -c 'from pypdf import PdfReader; r=PdfReader("/tmp/finance-worker-report.pdf"); assert len(r.pages) >= 1'
           echo "Cloudflare Python Worker preview health, projection, XLSX, and PDF smoke tests passed."
+
+  deploy-staging-api:
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy_staging_api == true
+    needs:
+      - test-and-container-build
+      - cloudflare-python-workers-preview
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Install Cloudflare Python Worker dependencies
+        working-directory: api
+        run: uv sync
+      - name: Deploy only the dedicated Finance API staging Worker
+        working-directory: api
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: "06248f5811845de4c1d9bb93f86f5a16"
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "Add CLOUDFLARE_API_TOKEN as a GitHub Actions secret before opting into staging deployment."; exit 1; }
+          uv run pywrangler deploy --config wrangler.toml
