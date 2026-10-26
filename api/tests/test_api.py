@@ -131,3 +131,20 @@ def test_cors_does_not_allow_unconfigured_origin():
         },
     )
     assert "access-control-allow-origin" not in response.headers
+
+
+def test_projection_includes_reconciled_loan_schedule():
+    response = client.post("/api/projection", json=payload())
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["debt_schedule"]) == 3
+    for row in body["debt_schedule"]:
+        assert round(row["opening_balance"] - row["principal_repayment"], 2) == row["closing_balance"]
+        assert round(row["interest_payment"] + row["principal_repayment"], 2) == row["total_debt_service"]
+
+
+def test_report_endpoints_include_download_filenames():
+    excel = client.post("/api/reports/excel", json=payload())
+    pdf = client.post("/api/reports/pdf", json=payload())
+    assert "filename=\"kaamkitpro-finance-projection.xlsx\"" in excel.headers["content-disposition"]
+    assert "filename=\"kaamkitpro-finance-projection.pdf\"" in pdf.headers["content-disposition"]
