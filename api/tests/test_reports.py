@@ -86,9 +86,11 @@ def test_excel_model_inputs_have_range_validation_and_clear_errors():
     workbook = workbook_for()
     inputs = workbook["Model Inputs"]
     validations = {
-        cell: validation
+        cell.coordinate: validation
         for validation in inputs.data_validations.dataValidation
-        for cell in validation.cells
+        for cell_range in validation.ranges
+        for row in inputs[cell_range.coord]
+        for cell in (row if isinstance(row, tuple) else (row,))
     }
 
     expected = {
