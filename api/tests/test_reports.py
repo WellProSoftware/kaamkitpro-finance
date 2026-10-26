@@ -1,5 +1,6 @@
-from openpyxl import load_workbook
 from io import BytesIO
+
+from openpyxl import load_workbook
 
 from app.reports import build_excel_report, build_pdf_report
 
@@ -12,6 +13,16 @@ def sample_projection():
         "project_cost": 1_000_000,
         "debt": 600_000,
         "equity": 400_000,
+        "model_inputs": {
+            "debt_pct": 60,
+            "monthly_revenue": 75_000,
+            "growth_pct": 5,
+            "variable_cost_pct": 44.444444,
+            "monthly_fixed_cost": 16_666.6667,
+            "interest_pct": 11,
+            "loan_years": 5,
+            "projection_years": 5,
+        },
         "annual_projection": [{
             "year": 1,
             "revenue": 900_000,
@@ -22,17 +33,83 @@ def sample_projection():
             "principal": 120_000,
             "dscr": 1.61,
             "cash_after_debt_service": 114_000,
+            "opening_debt": 600_000,
+            "closing_debt": 480_000,
+            "profit_before_tax_before_depreciation": 234_000,
         }],
     }
 
 
+def workbook_for(projection=None):
+    content = build_excel_report(projection or sample_projection())
+    return load_workbook(BytesIO(content), data_only=False)
+
+
 def test_excel_report_contains_formula_cells():
-    content = build_excel_report(sample_projection())
-    workbook = load_workbook(BytesIO(content), data_only=False)
+    workbook = workbook_for()
     sheet = workbook["Assumptions"]
     assert sheet["F10"].value == "=C10-D10-E10"
     assert sheet["I10"].value == "=G10+H10"
-    assert sheet["J10"].value == '=IF(I10=0,"",F10/I10)'
+    assert sheet["J10"].value == '=IF(OR(A10="",I10=0),"",F10/I10)'
+    assert sheet["M10"].value == "=F10-G10"
+
+
+def test_excel_model_inputs_drive_projection_and_summary_formulas():
+    workbook = workbook_for()
+    inputs = workbook["Model Inputs"]
+    assumptions = workbook["Assumptions"]
+    summary = workbook["Executive Summary"]
+
+    assert inputs["B7"].value == 75_000
+    assert inputs["B8"].value == 5
+    assert inputs["B12"].value == 5
+    assert inputs["B13"].value == 5
+
+    # Forecast formulas reference editable input cells rather than fixed values.
+    assert "'Model Inputs'!$B$7" in assumptions["C10"].value
+    assert "'Model Inputs'!$B$8" in assumptions["C10"].value
+    assert "'Model Inputs'!$B$9" in assumptions["D10"].value
+    assert "'Model Inputs'!$B$10" in assumptions["E10"].value
+    assert "'Model Inputs'!$B$11" in assumptions["G10"].value
+    assert "'Model Inputs'!$B$12" in assumptions["H10"].value
+    assert assumptions["C11"].value.endswith("^(A11-1))")
+
+    assert summary["B8"].value == '=IF($A8="","",\'Assumptions\'!C10)'
+    assert summary["C8"].value == '=IF($A8="","",\'Assumptions\'!F10)'
+    assert summary["D8"].value == '=IF($A8="","",\'Assumptions\'!I10)'
+    assert summary["E8"].value == '=IF($A8="","",\'Assumptions\'!J10)'
+    assert summary["F8"].value == '=IF($A8="","",\'Assumptions\'!K10)'
+
+
+def test_excel_forecast_has_debt_repayment_and_zero_debt_service_handling():
+    workbook = workbook_for()
+    sheet = workbook["Assumptions"]
+
+    assert "MAX(0,$B$6-(A10-1)*$B$6/'Model Inputs'!$B$12)" in sheet["B10"].value
+    assert "MIN(B10,$B$6/'Model Inputs'!$B$12)" in sheet["H10"].value
+    assert "MAX(0,B10-H10)" in sheet["L10"].value
+    assert 'IF(OR(A10="",I10=0),"",F10/I10)' == sheet["J10"].value
+    assert sheet["A109"].value.endswith(',"")')
+    assert sheet["C109"].value.startswith('=IF(A109="","",')
+
+
+def test_excel_chart_and_recalculation_settings_are_present():
+    workbook = workbook_for()
+    summary = workbook["Executive Summary"]
+
+    assert len(summary._charts) == 1
+    chart = summary._charts[0]
+    assert chart.title.tx.rich.p[0].r[0].t == "Revenue vs EBITDA"
+    assert workbook.calculation.fullCalcOnLoad is True
+    assert workbook.calculation.forceFullCalc is True
+    assert workbook.calculation.calcMode == "auto"
+
+
+def test_excel_report_includes_debt_balance_columns():
+    workbook = workbook_for()
+    sheet = workbook["Assumptions"]
+    assert sheet["B10"].value.startswith("=")
+    assert sheet["L10"].value.startswith("=")
     assert sheet["M10"].value == "=F10-G10"
 
 
@@ -41,38 +118,15 @@ def test_pdf_report_has_pdf_signature():
     assert content.startswith(b"%PDF")
 
 
-
-def test_excel_report_includes_debt_balance_columns():
-    content = build_excel_report({
-        **sample_projection(),
-        "annual_projection": [{
-            **sample_projection()["annual_projection"][0],
-            "opening_debt": 600000,
-            "closing_debt": 480000,
-            "profit_before_tax_before_depreciation": 234000,
-        }],
-    })
-    workbook = load_workbook(BytesIO(content), data_only=False)
-    sheet = workbook["Assumptions"]
-    assert sheet["B10"].value == 600000
-    assert sheet["L10"].value == 480000
-    assert sheet["M10"].value == "=F10-G10"
-
-
 def test_pdf_report_includes_debt_balance_data():
-    projection = sample_projection()
-    projection["annual_projection"][0].update({
-        "opening_debt": 600000,
-        "closing_debt": 480000,
-    })
-    content = build_pdf_report(projection)
+    content = build_pdf_report(sample_projection())
     assert content.startswith(b"%PDF")
     assert len(content) > 1000
 
 
 def test_excel_readme_discloses_equal_principal_not_emi():
-    content = build_excel_report(sample_projection())
-    workbook = load_workbook(BytesIO(content), data_only=False)
+    workbook = workbook_for()
     notes = workbook["Read Me"]
     assert "not an EMI schedule" in notes["A3"].value
     assert "not net profit" in notes["A4"].value
+    assert "Edit yellow cells on Model Inputs" in notes["A5"].value
