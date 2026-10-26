@@ -1,8 +1,10 @@
-.venv/
-.venv-workers/
+**/.venv/**
+**/.venv-workers/**
+**/__pycache__/**
+**/*.pyc
+**/tests/**
 .python-version
 uv.lock
 pylock.toml
 requirements-test.txt
 requirements-docker.txt
-tests/
