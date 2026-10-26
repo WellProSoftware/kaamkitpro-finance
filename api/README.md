@@ -23,6 +23,20 @@ uvicorn app.main:app --reload
 
 Open `http://127.0.0.1:8000/docs` for interactive API documentation.
 
+## Frontend CORS configuration
+
+By default, local development origins `http://localhost:3000` and
+`http://127.0.0.1:3000` are allowed. For staging, set
+`FINANCE_CORS_ORIGINS` to a comma-separated list of exact frontend origins,
+for example:
+
+```bash
+FINANCE_CORS_ORIGINS=https://your-staging-frontend.example
+```
+
+Use the actual staging frontend origin, with no path. Do not use `*` and do
+not include the production domain until a separately approved production plan.
+
 ## Endpoints
 
 - `GET /health` — health check
