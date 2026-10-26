@@ -9,12 +9,12 @@ def payload():
     return {
         "project_name": "Test Pharmacy",
         "project_type": "Pharmacy",
-        "project_cost": 1000000,
+        "project_cost": 1_000_000,
         "debt_pct": 60,
-        "monthly_revenue": 150000,
+        "monthly_revenue": 150_000,
         "growth_pct": 5,
         "variable_cost_pct": 55,
-        "monthly_fixed_cost": 25000,
+        "monthly_fixed_cost": 25_000,
         "interest_pct": 11,
         "loan_years": 5,
         "projection_years": 3,
@@ -25,6 +25,13 @@ def test_health_endpoint():
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+
+def test_root_lists_docs_and_endpoints():
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.json()["docs"] == "/docs"
+    assert "/api/reports/excel" in response.json()["endpoints"]
 
 
 def test_projection_endpoint_returns_requested_years():
@@ -52,4 +59,9 @@ def test_pdf_endpoint_returns_pdf():
 
 def test_rejects_invalid_debt_percentage():
     response = client.post("/api/projection", json={**payload(), "debt_pct": 150})
+    assert response.status_code == 422
+
+
+def test_rejects_negative_project_cost():
+    response = client.post("/api/projection", json={**payload(), "project_cost": -1})
     assert response.status_code == 422
