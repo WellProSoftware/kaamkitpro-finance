@@ -33,8 +33,8 @@ def build_projection(data: dict) -> dict:
         raise ValueError("interest_pct must be between 0 and 100")
     if not 1 <= loan_years <= 30:
         raise ValueError("loan_years must be between 1 and 30")
-    if not 1 <= years <= 10:
-        raise ValueError("projection_years must be between 1 and 10")
+    if not 1 <= years <= 100:
+        raise ValueError("projection_years must be between 1 and 100")
 
     debt = project_cost * debt_pct / 100
     equity = project_cost - debt
