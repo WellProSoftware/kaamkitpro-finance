@@ -34,3 +34,22 @@ jobs:
         run: python -m pytest -q
       - name: Validate Docker image build
         run: docker build -t kaamkitpro-finance-api:ci api
+      - name: Smoke test container health and API docs
+        shell: bash
+        run: |
+          set -euo pipefail
+          container_id="$(docker run -d -p 127.0.0.1:18000:8000 kaamkitpro-finance-api:ci)"
+          cleanup() { docker logs "$container_id" || true; docker rm -f "$container_id" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18000/health >/tmp/finance-health.json; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" -eq 1
+          python -c 'import json; d=json.load(open("/tmp/finance-health.json")); assert d["status"] == "ok"; assert d["service"] == "kaamkitpro-finance-api"'
+          curl --fail --silent http://127.0.0.1:18000/docs >/dev/null
+          echo "Container health and API docs smoke tests passed."
