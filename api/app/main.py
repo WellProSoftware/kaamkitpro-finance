@@ -48,7 +48,7 @@ def root():
 def projection(data: ProjectionInput):
     try:
         return make_projection(data)
-    except (ValueError, TypeError, ZeroDivisionError) as exc:
+    except (ValueError, TypeError, ZeroDivisionError, OverflowError) as exc:
         raise HTTPException(status_code=422, detail="Unable to calculate projection from the supplied assumptions.") from exc
 
 
