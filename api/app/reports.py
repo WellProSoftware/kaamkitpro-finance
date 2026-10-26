@@ -172,7 +172,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
         summary.add_chart(chart, "A16")
 
     # Read Me / limitations
-    notes.append(["Important limitations"])
+    notes["A1"] = "Important limitations"
     notes.append(["This workbook is an illustrative planning estimate, not an audited financial statement or bank-approved DPR."])
     notes.append(["The debt schedule uses equal annual principal repayments with interest calculated on opening balance; it is not an EMI schedule."])
     notes.append(["Profit before tax shown is before depreciation and tax; it is not net profit."])
