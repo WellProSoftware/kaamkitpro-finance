@@ -43,7 +43,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     monthly_fixed = model.get("monthly_fixed_cost", (first.get("fixed_cost", 0) or 0) / 12)
     interest_pct = model.get("interest_pct", ((first.get("interest", 0) or 0) / (first.get("opening_debt", 1) or 1) * 100 if first.get("opening_debt") else 11))
     loan_years = model.get("loan_years", max(1, len(annual) or 7))
-    years = len(annual) or model.get("projection_years", 5)
+    years = model.get("projection_years", len(annual) or 5)
 
     inputs.append(["KAAMKITPRO FINANCE | EDITABLE MODEL INPUTS"])
     inputs.append(["Project name", name])
