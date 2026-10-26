@@ -1,6 +1,8 @@
+import os
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
@@ -8,6 +10,22 @@ from .model import build_projection
 from .reports import build_excel_report, build_pdf_report
 
 app = FastAPI(title="KaamKitPro Finance API", version="0.3.0")
+
+# Configure explicit staging frontend origins via FINANCE_CORS_ORIGINS.
+# Keep localhost available for local development; do not use wildcard origins.
+_default_origins = "http://localhost:3000,http://127.0.0.1:3000"
+_allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("FINANCE_CORS_ORIGINS", _default_origins).split(",")
+    if origin.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_allowed_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type"],
+)
 
 
 class ProjectionInput(BaseModel):
