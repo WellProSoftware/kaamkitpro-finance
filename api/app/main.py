@@ -21,7 +21,7 @@ class ProjectionInput(BaseModel):
     monthly_fixed_cost: float = Field(default=0, ge=0, le=1_000_000_000_000_000)
     interest_pct: float = Field(default=11, ge=0, le=100)
     loan_years: int = Field(default=7, ge=1, le=30)
-    projection_years: int = Field(default=5, ge=1, le=10)
+    projection_years: int = Field(default=5, ge=1, le=100)
 
 
 def make_projection(data: ProjectionInput) -> dict[str, Any]:
