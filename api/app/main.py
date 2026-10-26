@@ -1,16 +1,20 @@
-from fastapi import FastAPI
+import json
+import os
+from typing import Any
+
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from .model import build_projection
 from .reports import build_excel_report, build_pdf_report
 
-app = FastAPI(title="Professional Projection Software API", version="0.2.0")
+app = FastAPI(title="KaamKitPro Finance API", version="0.3.0")
 
 
 class ProjectionInput(BaseModel):
     project_name: str = Field(default="New Project", max_length=120)
-    project_type: str = "Other"
+    project_type: str = Field(default="Other", max_length=80)
     project_cost: float = Field(default=0, ge=0)
     debt_pct: float = Field(default=50, ge=0, le=100)
     monthly_revenue: float = Field(default=0, ge=0)
@@ -22,7 +26,7 @@ class ProjectionInput(BaseModel):
     projection_years: int = Field(default=5, ge=1, le=10)
 
 
-def make_projection(data: ProjectionInput) -> dict:
+def make_projection(data: ProjectionInput) -> dict[str, Any]:
     result = build_projection(data.model_dump())
     result["project_name"] = data.project_name
     result["project_type"] = data.project_type
@@ -31,12 +35,25 @@ def make_projection(data: ProjectionInput) -> dict:
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "kaamkitpro-finance-api"}
+    return {"status": "ok", "service": "kaamkitpro-finance-api", "version": app.version}
+
+
+@app.get("/")
+def root():
+    return {
+        "service": "KaamKitPro Finance API",
+        "docs": "/docs",
+        "health": "/health",
+        "endpoints": ["/api/projection", "/api/reports/excel", "/api/reports/pdf"],
+    }
 
 
 @app.post("/api/projection")
 def projection(data: ProjectionInput):
-    return make_projection(data)
+    try:
+        return make_projection(data)
+    except (ValueError, TypeError, ZeroDivisionError) as exc:
+        raise HTTPException(status_code=422, detail="Unable to calculate projection from the supplied assumptions.") from exc
 
 
 @app.post("/api/reports/excel")
