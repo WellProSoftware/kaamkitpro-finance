@@ -19,76 +19,99 @@ THIN_GREY = Side(style="thin", color="D9E0EA")
 
 
 def build_excel_report(projection: dict[str, Any]) -> bytes:
-    """Return a formatted, editable XLSX workbook with summary and annual projections."""
+    """Create an editable workbook whose assumptions drive the full annual forecast."""
     wb = Workbook()
     summary = wb.active
     summary.title = "Executive Summary"
     assumptions = wb.create_sheet("Assumptions")
+    inputs = wb.create_sheet("Model Inputs")
     notes = wb.create_sheet("Read Me")
 
-    project_name = projection.get("project_name", "New Project")
+    name = projection.get("project_name", "New Project")
     project_type = projection.get("project_type", "Other")
     currency = projection.get("currency", "INR")
+    annual = projection.get("annual_projection", [])
+    model = projection.get("model_inputs", {})
+    # Backward-compatible fallbacks derived from the supplied projection.
+    first = annual[0] if annual else {}
     project_cost = projection.get("project_cost", 0) or 0
     debt = projection.get("debt", 0) or 0
-    equity = projection.get("equity", 0) or 0
-    annual = projection.get("annual_projection", [])
+    debt_pct = model.get("debt_pct", (debt / project_cost * 100 if project_cost else 50))
+    monthly_revenue = model.get("monthly_revenue", (first.get("revenue", 0) or 0) / 12)
+    growth_pct = model.get("growth_pct", 5)
+    variable_pct = model.get("variable_cost_pct", ((first.get("variable_cost", 0) or 0) / first.get("revenue", 1) * 100 if first.get("revenue") else 45))
+    monthly_fixed = model.get("monthly_fixed_cost", (first.get("fixed_cost", 0) or 0) / 12)
+    interest_pct = model.get("interest_pct", ((first.get("interest", 0) or 0) / (first.get("opening_debt", 1) or 1) * 100 if first.get("opening_debt") else 11))
+    loan_years = model.get("loan_years", max(1, len(annual) or 7))
+    years = len(annual) or model.get("projection_years", 5)
 
-    # Executive summary
+    inputs.append(["KAAMKITPRO FINANCE | EDITABLE MODEL INPUTS"])
+    inputs.append(["Project name", name])
+    inputs.append(["Project type", project_type])
+    inputs.append(["Currency", currency])
+    inputs.append(["Project cost", project_cost])
+    inputs.append(["Debt funding (%)", debt_pct])
+    inputs.append(["Monthly revenue", monthly_revenue])
+    inputs.append(["Annual revenue growth (%)", growth_pct])
+    inputs.append(["Variable cost (%)", variable_pct])
+    inputs.append(["Monthly fixed cost", monthly_fixed])
+    inputs.append(["Annual interest rate (%)", interest_pct])
+    inputs.append(["Loan term (years)", loan_years])
+    inputs.append(["Projection period (years)", years])
+    inputs["B5"].number_format = '"INR " #,##0.00'
+    for cell in ("B6", "B8", "B9", "B11"):
+        inputs[cell].number_format = "0.00"
+    for cell in ("B7", "B10"):
+        inputs[cell].number_format = '"INR " #,##0.00'
+    for cell in ("B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13"):
+        inputs[cell].fill = PatternFill("solid", fgColor="FFF2CC")
+    inputs.column_dimensions["A"].width = 30
+    inputs.column_dimensions["B"].width = 24
+    inputs.freeze_panes = "A2"
+
+    # Detailed projection formulas refer to editable inputs; no fixed forecast values.
+    assumptions.append(["KAAMKITPRO FINANCE | LIVE ANNUAL PROJECTION"])
+    assumptions.append(["Project name", "='Model Inputs'!B2"])
+    assumptions.append(["Project type", "='Model Inputs'!B3"])
+    assumptions.append(["Currency", "='Model Inputs'!B4"])
+    assumptions.append(["Project cost", "='Model Inputs'!B5"])
+    assumptions.append(["Debt", "='Model Inputs'!B5*'Model Inputs'!B6/100"])
+    assumptions.append(["Equity", "='Model Inputs'!B5-B6"])
+    assumptions.append([])
+    assumptions.append(["Year", "Opening Debt", "Revenue", "Variable Cost", "Fixed Cost", "EBITDA", "Interest", "Principal", "Debt Service", "DSCR", "Cash After Debt Service", "Closing Debt", "Profit Before Tax (Pre-Depreciation)"])
+    for year in range(1, 101):
+        r = 9 + year
+        assumptions.cell(r, 1, f'=IF(ROW()-9<=\'Model Inputs\'!$B$13,ROW()-9,"")')
+        assumptions.cell(r, 2, f'=IF(A{r}="","",MAX(0,$B$6-(A{r}-1)*$B$6/\'Model Inputs\'!$B$12))')
+        assumptions.cell(r, 3, f'=IF(A{r}="","",\'Model Inputs\'!$B$7*12*(1+\'Model Inputs\'!$B$8/100)^(A{r}-1))')
+        assumptions.cell(r, 4, f'=IF(A{r}="","",C{r}*\'Model Inputs\'!$B$9/100)')
+        assumptions.cell(r, 5, f'=IF(A{r}="","",\'Model Inputs\'!$B$10*12)')
+        assumptions.cell(r, 6, f'=IF(A{r}="","",C{r}-D{r}-E{r})')
+        assumptions.cell(r, 7, f'=IF(A{r}="","",IF(A{r}<=\'Model Inputs\'!$B$12,B{r}*\'Model Inputs\'!$B$11/100,0))')
+        assumptions.cell(r, 8, f'=IF(A{r}="","",IF(A{r}<=\'Model Inputs\'!$B$12,MIN(B{r},$B$6/\'Model Inputs\'!$B$12),0))')
+        assumptions.cell(r, 9, f'=IF(A{r}="","",G{r}+H{r})')
+        assumptions.cell(r, 10, f'=IF(OR(A{r}="",I{r}=0),"",F{r}/I{r})')
+        assumptions.cell(r, 11, f'=IF(A{r}="","",F{r}-I{r})')
+        assumptions.cell(r, 12, f'=IF(A{r}="","",MAX(0,B{r}-H{r}))')
+        assumptions.cell(r, 13, f'=IF(A{r}="","",F{r}-G{r})')
+
     summary.append(["KAAMKITPRO FINANCE | PROJECT SUMMARY"])
-    summary.append(["Project", project_name, "Project Type", project_type])
-    summary.append(["Currency", currency, "Projection Period (Years)", len(annual)])
-    summary.append(["Project Cost", project_cost, "Debt Funding", debt])
-    summary.append(["Equity Funding", equity, "Debt / Equity", (debt / equity if equity else None)])
+    summary.append(["Project", "='Model Inputs'!B2", "Project Type", "='Model Inputs'!B3"])
+    summary.append(["Currency", "='Model Inputs'!B4", "Projection Period (Years)", "='Model Inputs'!B13'])
+    summary.append(["Project Cost", "='Model Inputs'!B5", "Debt Funding", "='Model Inputs'!B5*'Model Inputs'!B6/100"])
+    summary.append(["Equity Funding", "='Model Inputs'!B5*(1-'Model Inputs'!B6/100)", "Debt / Equity", '=IF(B5=0,"",D4/B5)'])
     summary.append([])
     summary.append(["YEAR", "REVENUE", "EBITDA", "DEBT SERVICE", "DSCR", "CASH AFTER DEBT"])
-    for row in annual:
-        summary.append([
-            row.get("year"),
-            row.get("revenue", 0),
-            row.get("ebitda", 0),
-            (row.get("interest", 0) or 0) + (row.get("principal", 0) or 0),
-            row.get("dscr"),
-            row.get("cash_after_debt_service", 0),
-        ])
-    summary.append([])
-    summary.append(["Planning note", "Illustrative estimate only; validate assumptions before using for lending or investment decisions."])
+    for year in range(1, 101):
+        r = 7 + year
+        source = 9 + year
+        summary.cell(r, 1, f'=IF(\'Assumptions\'!A{source}="","",\'Assumptions\'!A{source})')
+        for col, source_col in ((2,"C"),(3,"F"),(4,"I"),(5,"J"),(6,"K")):
+            summary.cell(r, col, f'=IF($A{r}="","",\'Assumptions\'!{source_col}{source})')
+    summary["A110"] = "Planning note"
+    summary["B110"] = "Illustrative estimate only; validate assumptions before lending or investment decisions."
 
-    # Detailed assumptions and annual projection
-    assumptions.append(["KAAMKITPRO FINANCE | PROJECT ASSUMPTIONS & PROJECTION"])
-    assumptions.append(["Project name", project_name])
-    assumptions.append(["Project type", project_type])
-    assumptions.append(["Currency", currency])
-    assumptions.append(["Project cost", project_cost])
-    assumptions.append(["Debt", debt])
-    assumptions.append(["Equity", equity])
-    assumptions.append([])
-    headers = [
-        "Year", "Opening Debt", "Revenue", "Variable Cost", "Fixed Cost", "EBITDA",
-        "Interest", "Principal", "Debt Service", "DSCR", "Cash After Debt Service",
-        "Closing Debt", "Profit Before Tax (Pre-Depreciation)",
-    ]
-    assumptions.append(headers)
-    for row in annual:
-        r = assumptions.max_row + 1
-        assumptions.append([
-            row.get("year"),
-            row.get("opening_debt", 0),
-            row.get("revenue", 0),
-            row.get("variable_cost", 0),
-            row.get("fixed_cost", 0),
-            f"=C{r}-D{r}-E{r}",
-            row.get("interest", 0),
-            row.get("principal", 0),
-            f"=G{r}+H{r}",
-            f'=IF(I{r}=0,"",F{r}/I{r})',
-            f"=F{r}-I{r}",
-            row.get("closing_debt", 0),
-            f"=F{r}-G{r}",
-        ])
-
-    # Consistent workbook styling
-    for ws in (summary, assumptions, notes):
+    for ws in (summary, assumptions, inputs, notes):
         ws.sheet_view.showGridLines = False
         ws.sheet_properties.pageSetUpPr.fitToPage = True
         ws.page_setup.fitToWidth = 1
@@ -98,88 +121,66 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
         ws.oddFooter.center.text = "KaamKitPro Finance | Illustrative planning estimate"
         ws.oddFooter.right.text = "Page &P of &N"
 
-    for ws, title_row in ((summary, 1), (assumptions, 1), (notes, 1)):
-        ws.merge_cells(start_row=title_row, start_column=1, end_row=title_row, end_column=(6 if ws is summary else 13 if ws is assumptions else 1))
-        cell = ws.cell(title_row, 1)
-        cell.fill = PatternFill("solid", fgColor=NAVY)
-        cell.font = Font(bold=True, color=WHITE, size=16)
-        cell.alignment = Alignment(vertical="center")
-        ws.row_dimensions[title_row].height = 30
+    for ws, end_col in ((summary, 6), (assumptions, 13), (inputs, 2), (notes, 1)):
+        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=end_col)
+        ws["A1"].fill = PatternFill("solid", fgColor=NAVY)
+        ws["A1"].font = Font(bold=True, color=WHITE, size=16)
+        ws["A1"].alignment = Alignment(vertical="center")
+        ws.row_dimensions[1].height = 30
 
-    for cell in summary[7]:
-        cell.fill = PatternFill("solid", fgColor=BLUE)
-        cell.font = Font(bold=True, color=WHITE)
-        cell.alignment = Alignment(wrap_text=True, vertical="center")
-    summary.row_dimensions[7].height = 32
-    for r in range(2, 6):
-        for c in (1, 3):
-            summary.cell(r, c).font = Font(bold=True, color=GREY)
-        for c in (2, 4):
-            summary.cell(r, c).fill = PatternFill("solid", fgColor=PALE_BLUE)
-    for r in range(8, 8 + len(annual)):
-        if r % 2 == 0:
-            for c in range(1, 7):
-                summary.cell(r, c).fill = PatternFill("solid", fgColor=LIGHT_GREY)
-    summary.column_dimensions["A"].width = 25
-    for col in "BCDEF":
+    for ws, header_row in ((summary,7),(assumptions,9)):
+        for cell in ws[header_row]:
+            cell.fill = PatternFill("solid", fgColor=BLUE)
+            cell.font = Font(bold=True, color=WHITE)
+            cell.alignment = Alignment(wrap_text=True, vertical="center")
+        ws.row_dimensions[header_row].height = 34
+
+    for col, width in enumerate([10,18,18,18,18,18,16,16,18,12,24,18,32],1):
+        assumptions.column_dimensions[get_column_letter(col)].width = width
+    for col in "ABCDEF":
         summary.column_dimensions[col].width = 22
+    summary.column_dimensions["A"].width = 25
     summary.freeze_panes = "A8"
-    summary.auto_filter.ref = f"A7:F{max(7, 7 + len(annual))}"
-
-    for cell in assumptions[9]:
-        cell.fill = PatternFill("solid", fgColor=BLUE)
-        cell.font = Font(bold=True, color=WHITE)
-        cell.alignment = Alignment(wrap_text=True, vertical="center")
-    assumptions.row_dimensions[9].height = 34
-    widths = [10, 18, 18, 18, 18, 18, 16, 16, 18, 12, 24, 18, 32]
-    for i, width in enumerate(widths, start=1):
-        assumptions.column_dimensions[get_column_letter(i)].width = width
     assumptions.freeze_panes = "A10"
-    assumptions.auto_filter.ref = f"A9:M{max(9, 9 + len(annual))}"
+    summary.auto_filter.ref = "A7:F107"
+    assumptions.auto_filter.ref = "A9:M109"
 
-    money_format = '#,##0.00;[Red](#,##0.00);-'
-    for ws, first_data_row, last_data_row, cols in (
-        (summary, 8, 7 + len(annual), (2, 3, 4, 6)),
-        (assumptions, 10, 9 + len(annual), tuple(range(2, 10)) + (11, 12, 13)),
-    ):
-        for r in range(first_data_row, last_data_row + 1):
-            for c in cols:
-                ws.cell(r, c).number_format = f'"{currency} " {money_format}'
-            for c in range(1, ws.max_column + 1):
-                ws.cell(r, c).border = Border(bottom=THIN_GREY)
-                ws.cell(r, c).alignment = Alignment(vertical="center")
-    for r in range(8, 8 + len(annual)):
-        summary.cell(r, 5).number_format = '0.00"x"'
-    for r in range(10, 10 + len(annual)):
-        assumptions.cell(r, 10).number_format = '0.00"x"'
-    for cell_ref in ("B5", "D5"):
-        summary[cell_ref].number_format = "0.00x" if cell_ref == "D5" else f'"{currency} " {money_format}'
-    for cell_ref in ("B5", "B6", "B7"):
-        assumptions[cell_ref].number_format = f'"{currency} " {money_format}'
+    money_format = '"INR " #,##0.00;[Red]("INR " #,##0.00);-'
+    for r in range(10,110):
+        for col in (2,3,4,5,6,7,8,9,11,12,13):
+            assumptions.cell(r,col).number_format = money_format
+        assumptions.cell(r,10).number_format = '0.00"x"'
+        for col in range(1,14):
+            assumptions.cell(r,col).border = Border(bottom=THIN_GREY)
+    for r in range(8,108):
+        for col in (2,3,4,6):
+            summary.cell(r,col).number_format = money_format
+        summary.cell(r,5).number_format = '0.00"x"'
+        for col in range(1,7):
+            summary.cell(r,col).border = Border(bottom=THIN_GREY)
+    for cell in ("B4","D4","B5"):
+        summary[cell].number_format = money_format
+    summary["D5"].number_format = "0.00x"
 
-    # Revenue and EBITDA comparison chart
-    if annual:
-        chart = BarChart()
-        chart.type = "col"
-        chart.style = 10
-        chart.title = "Revenue vs EBITDA"
-        chart.y_axis.title = currency
-        chart.x_axis.title = "Year"
-        chart.height = 7
-        chart.width = 14
-        chart.add_data(Reference(summary, min_col=2, max_col=3, min_row=7, max_row=7 + len(annual)), titles_from_data=True)
-        chart.set_categories(Reference(summary, min_col=1, min_row=8, max_row=7 + len(annual)))
-        summary.add_chart(chart, "A16")
+    chart = BarChart()
+    chart.type = "col"
+    chart.style = 10
+    chart.title = "Revenue vs EBITDA"
+    chart.y_axis.title = currency
+    chart.x_axis.title = "Year"
+    chart.height = 7
+    chart.width = 14
+    chart.add_data(Reference(summary, min_col=2, max_col=3, min_row=7, max_row=107), titles_from_data=True)
+    chart.set_categories(Reference(summary, min_col=1, min_row=8, max_row=107))
+    summary.add_chart(chart, "A16")
 
-    # Read Me / limitations
     notes["A1"] = "Important limitations"
     notes.append(["This workbook is an illustrative planning estimate, not an audited financial statement or bank-approved DPR."])
     notes.append(["The debt schedule uses equal annual principal repayments with interest calculated on opening balance; it is not an EMI schedule."])
     notes.append(["Profit before tax shown is before depreciation and tax; it is not net profit."])
-    notes.append(["Annual projection values are generated by the API. Some spreadsheet formulas recalculate derived values, but changing assumptions does not yet rebuild the full projection model."])
+    notes.append(["Edit yellow cells on Model Inputs; the annual forecast, summary and chart recalculate in Excel."])
     notes.append(["Review assumptions and formulas with a qualified finance professional before submitting to a lender or investor."])
     notes.column_dimensions["A"].width = 115
-    notes.row_dimensions[1].height = 28
     for cell in notes[1]:
         cell.fill = PatternFill("solid", fgColor=NAVY)
         cell.font = Font(bold=True, color=WHITE, size=14)
@@ -187,6 +188,9 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
         notes.cell(r, 1).alignment = Alignment(wrap_text=True, vertical="top")
         notes.row_dimensions[r].height = 36
 
+    wb.calculation.fullCalcOnLoad = True
+    wb.calculation.forceFullCalc = True
+    wb.calculation.calcMode = "auto"
     output = BytesIO()
     wb.save(output)
     return output.getvalue()
