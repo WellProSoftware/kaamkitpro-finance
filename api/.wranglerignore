@@ -1,0 +1,8 @@
+.venv/
+.venv-workers/
+.python-version
+uv.lock
+pylock.toml
+requirements-test.txt
+requirements-docker.txt
+tests/
