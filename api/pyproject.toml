@@ -14,4 +14,5 @@ dependencies = [
 dev = [
     "workers-py",
     "workers-runtime-sdk",
+    "pypdf>=5.0,<7.0",
 ]
