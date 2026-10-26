@@ -46,17 +46,24 @@ def root():
     }
 
 
-@app.post("/api/projection")
-def projection(data: ProjectionInput):
+def validated_projection(data: ProjectionInput) -> dict[str, Any]:
     try:
         return make_projection(data)
     except (ValueError, TypeError, ZeroDivisionError, OverflowError) as exc:
-        raise HTTPException(status_code=422, detail="Unable to calculate projection from the supplied assumptions.") from exc
+        raise HTTPException(
+            status_code=422,
+            detail="Unable to calculate projection from the supplied assumptions.",
+        ) from exc
+
+
+@app.post("/api/projection")
+def projection(data: ProjectionInput):
+    return validated_projection(data)
 
 
 @app.post("/api/reports/excel")
 def excel_report(data: ProjectionInput):
-    result = make_projection(data)
+    result = validated_projection(data)
     return Response(
         content=build_excel_report(result),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -66,7 +73,7 @@ def excel_report(data: ProjectionInput):
 
 @app.post("/api/reports/pdf")
 def pdf_report(data: ProjectionInput):
-    result = make_projection(data)
+    result = validated_projection(data)
     return Response(
         content=build_pdf_report(result),
         media_type="application/pdf",
