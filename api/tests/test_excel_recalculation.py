@@ -149,25 +149,20 @@ def test_excel_model_inputs_have_validation_for_all_numeric_assumptions() -> Non
 
     workbook = load_workbook(io.BytesIO(workbook_bytes), data_only=False)
     inputs = workbook["Model Inputs"]
-    validated_cells = {
-        cell
+    validated_coordinates = {
+        coordinate
         for validation in inputs.data_validations.dataValidation
-        for cell_range in validation.ranges
-        for row in inputs[cell_range.coord]
-        for cell in row
+        for coordinate in str(validation.sqref).split()
     }
-    validated_coordinates = {cell.coordinate for cell in validated_cells}
 
     # Numeric inputs B5:B13 must have explicit validation rules, including
     # project cost, debt %, monthly revenue, growth, costs, interest and terms.
     assert {f"B{row}" for row in range(5, 14)} <= validated_coordinates
 
     validation_by_cell = {
-        cell.coordinate: validation
+        coordinate: validation
         for validation in inputs.data_validations.dataValidation
-        for cell_range in validation.ranges
-        for row in inputs[cell_range.coord]
-        for cell in row
+        for coordinate in str(validation.sqref).split()
     }
     assert validation_by_cell["B6"].type == "decimal"
     assert validation_by_cell["B6"].operator == "between"
