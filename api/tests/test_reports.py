@@ -214,3 +214,16 @@ def test_excel_report_stores_user_project_text_as_literal_strings(
     assert cell.value == formula_like_value
     assert cell.data_type == "s"
 
+def test_reports_keep_currency_consistent_with_inr_only_model():
+    """Non-INR metadata must not relabel INR-based calculations."""
+    projection = sample_projection()
+    projection["currency"] = "USD"
+
+    workbook = workbook_for(projection)
+    assert workbook["Model Inputs"]["B4"].value == "INR"
+    assert workbook["Executive Summary"]["B3"].value == "='Model Inputs'!B4"
+    assert workbook["Executive Summary"]._charts[0].y_axis.title.tx.rich.p[0].r[0].t == "INR"
+
+    pdf = build_pdf_report(projection)
+    assert b"Currency: INR" in pdf
+    assert b"Project cost: INR" in pdf
