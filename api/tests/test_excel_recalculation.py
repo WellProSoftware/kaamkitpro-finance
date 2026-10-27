@@ -121,3 +121,55 @@ def test_excel_workbook_recalculates_live_forecast_and_summary(tmp_path: Path) -
     assert edited_summary["C8"].value == pytest.approx(624_000)
     assert edited_assumptions["C10"].value != assumptions["C10"].value
     assert_no_formula_errors(edited)
+
+
+def test_excel_model_inputs_have_validation_for_all_numeric_assumptions() -> None:
+    """Guard against accidentally removing spreadsheet input safeguards."""
+    workbook_bytes = build_excel_report(
+        {
+            "project_name": "Validation test",
+            "project_type": "Other",
+            "currency": "INR",
+            "project_cost": 1_000_000,
+            "debt": 600_000,
+            "annual_projection": [],
+            "model_inputs": {
+                "debt_pct": 60,
+                "monthly_revenue": 100_000,
+                "growth_pct": 10,
+                "variable_cost_pct": 40,
+                "monthly_fixed_cost": 20_000,
+                "interest_pct": 10,
+                "loan_years": 5,
+                "projection_years": 3,
+            },
+        }
+    )
+    import io
+
+    workbook = load_workbook(io.BytesIO(workbook_bytes), data_only=False)
+    inputs = workbook["Model Inputs"]
+    validated_cells = {
+        cell
+        for validation in inputs.data_validations.dataValidation
+        for cell_range in validation.ranges
+        for row in inputs[cell_range.coord]
+        for cell in row
+    }
+    validated_coordinates = {cell.coordinate for cell in validated_cells}
+
+    # Numeric inputs B5:B13 must have explicit validation rules, including
+    # project cost, debt %, monthly revenue, growth, costs, interest and terms.
+    assert {f"B{row}" for row in range(5, 14)} <= validated_coordinates
+
+    validation_by_cell = {
+        cell.coordinate: validation
+        for validation in inputs.data_validations.dataValidation
+        for cell_range in validation.ranges
+        for row in inputs[cell_range.coord]
+        for cell in row
+    }
+    assert validation_by_cell["B6"].type == "decimal"
+    assert validation_by_cell["B6"].operator == "between"
+    assert validation_by_cell["B12"].type == "whole"
+    assert validation_by_cell["B13"].type == "whole"
