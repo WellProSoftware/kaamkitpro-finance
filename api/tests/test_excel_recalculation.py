@@ -260,3 +260,49 @@ def test_excel_workbook_supports_full_100_year_projection(tmp_path: Path) -> Non
     assert summary["B107"].value == pytest.approx(120_000)
     assert assumptions["A110"].value in (None, "")
     assert_no_formula_errors(workbook)
+
+
+@pytest.mark.skipif(shutil.which("soffice") is None, reason="LibreOffice is not installed")
+def test_excel_loan_is_repaid_at_term_and_interest_stops(tmp_path: Path) -> None:
+    """Equal-principal debt reaches zero at term end; later interest is zero."""
+    projection = {
+        "project_name": "Loan payoff test",
+        "project_type": "Other",
+        "currency": "INR",
+        "project_cost": 1_000_000,
+        "debt": 600_000,
+        "equity": 400_000,
+        "model_inputs": {
+            "debt_pct": 60,
+            "monthly_revenue": 100_000,
+            "growth_pct": 0,
+            "variable_cost_pct": 40,
+            "monthly_fixed_cost": 20_000,
+            "interest_pct": 10,
+            "loan_years": 5,
+            "projection_years": 7,
+        },
+        "annual_projection": [],
+    }
+    source = tmp_path / "loan-payoff.xlsx"
+    source.write_bytes(build_excel_report(projection))
+    calculated_path = recalculate_with_libreoffice(
+        source, tmp_path / "calculated", tmp_path / "lo-profile"
+    )
+    workbook = load_workbook(calculated_path, data_only=True)
+    assumptions = workbook["Assumptions"]
+
+    # Year 5 starts with the final 120,000 principal balance.
+    assert assumptions["A14"].value == 5
+    assert assumptions["B14"].value == pytest.approx(120_000)
+    assert assumptions["G14"].value == pytest.approx(12_000)
+    assert assumptions["H14"].value == pytest.approx(120_000)
+    assert assumptions["L14"].value == pytest.approx(0)
+
+    # Debt service contains no interest or principal after payoff.
+    assert assumptions["A15"].value == 6
+    assert assumptions["G15"].value == pytest.approx(0)
+    assert assumptions["H15"].value == pytest.approx(0)
+    assert assumptions["I15"].value == pytest.approx(0)
+    assert assumptions["L15"].value == pytest.approx(0)
+    assert_no_formula_errors(workbook)
