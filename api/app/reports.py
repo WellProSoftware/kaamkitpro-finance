@@ -42,8 +42,9 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     variable_pct = model.get("variable_cost_pct", ((first.get("variable_cost", 0) or 0) / first.get("revenue", 1) * 100 if first.get("revenue") else 45))
     monthly_fixed = model.get("monthly_fixed_cost", (first.get("fixed_cost", 0) or 0) / 12)
     interest_pct = model.get("interest_pct", ((first.get("interest", 0) or 0) / (first.get("opening_debt", 1) or 1) * 100 if first.get("opening_debt") else 11))
-    loan_years = model.get("loan_years", max(1, len(annual) or 7))
-    years = model.get("projection_years", len(annual) or 5)
+    # Keep legacy fallbacks inside the same bounds as the editable input validations.
+    loan_years = model.get("loan_years", min(30, max(1, len(annual) or 7)))
+    years = model.get("projection_years", min(100, max(1, len(annual) or 5)))
 
     inputs.append(["KAAMKITPRO FINANCE | EDITABLE MODEL INPUTS"])
     inputs.append(["Project name", name])
