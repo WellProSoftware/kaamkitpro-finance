@@ -199,6 +199,7 @@ def test_excel_readme_discloses_equal_principal_not_emi():
     [
         ("project_name", "B2", '=HYPERLINK("https://example.invalid","click")'),
         ("project_type", "B3", "=1+1"),
+        ("currency", "B4", "=1+1"),
     ],
 )
 def test_excel_report_stores_user_project_text_as_literal_strings(
