@@ -214,5 +214,8 @@ def test_excel_workbook_handles_zero_cost_or_zero_debt(
     assert assumptions["H10"].value == pytest.approx(0)
     assert assumptions["I10"].value == pytest.approx(0)
     assert assumptions["J10"].value in (None, "")
-    assert summary["D5"].value in (None, "")
+    if project_cost == 0:
+        assert summary["D5"].value in (None, "")
+    else:
+        assert summary["D5"].value == pytest.approx(0)
     assert_no_formula_errors(workbook)
