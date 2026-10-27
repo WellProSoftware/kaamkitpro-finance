@@ -29,7 +29,8 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
 
     name = projection.get("project_name", "New Project")
     project_type = projection.get("project_type", "Other")
-    # This model calculates in INR only; do not label INR amounts with another currency.\n    currency = "INR"
+    # This model calculates in INR only; do not label INR amounts with another currency.
+    currency = "INR"
     annual = projection.get("annual_projection", [])
     model = projection.get("model_inputs", {})
     # Backward-compatible fallbacks derived from the supplied projection.
