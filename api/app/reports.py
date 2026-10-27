@@ -29,7 +29,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
 
     name = projection.get("project_name", "New Project")
     project_type = projection.get("project_type", "Other")
-    currency = projection.get("currency", "INR")
+    # This model calculates in INR only; do not label INR amounts with another currency.\n    currency = "INR"
     annual = projection.get("annual_projection", [])
     model = projection.get("model_inputs", {})
     # Backward-compatible fallbacks derived from the supplied projection.
@@ -232,7 +232,7 @@ def build_pdf_report(projection: dict[str, Any]) -> bytes:
     """Return a compact, valid PDF summary using built-in PDF drawing commands."""
     lines = [
         "KaamKitPro Finance - Project Projection",
-        f"Project: {projection.get('project_name', 'New Project')} | Type: {projection.get('project_type', 'Other')} | Currency: {projection.get('currency', 'INR')}",
+        f"Project: {projection.get('project_name', 'New Project')} | Type: {projection.get('project_type', 'Other')} | Currency: INR",
         f"Project cost: INR {projection.get('project_cost', 0):,.0f} | Debt: INR {projection.get('debt', 0):,.0f} | Equity: INR {projection.get('equity', 0):,.0f}",
         "",
         "Year | Opening debt | Revenue | Variable cost | Fixed cost | EBITDA | Interest | Principal | Closing debt | DSCR | Cash after debt",
