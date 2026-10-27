@@ -84,6 +84,22 @@ def test_excel_model_inputs_drive_projection_and_summary_formulas():
 
 
 
+
+def test_legacy_excel_fallbacks_stay_within_input_validation_ranges():
+    """Legacy projections longer than the loan-term limit still produce valid inputs."""
+    projection = sample_projection()
+    projection.pop("model_inputs", None)
+    projection["annual_projection"] = [
+        {"year": year, "revenue": 900_000}
+        for year in range(1, 46)
+    ]
+
+    workbook = workbook_for(projection)
+    inputs = workbook["Model Inputs"]
+
+    assert inputs["B12"].value == 30
+    assert inputs["B13"].value == 45
+
 def test_excel_model_inputs_have_range_validation_and_clear_errors():
     workbook = workbook_for()
     inputs = workbook["Model Inputs"]
