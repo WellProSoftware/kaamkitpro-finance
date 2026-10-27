@@ -168,3 +168,51 @@ def test_excel_model_inputs_have_validation_for_all_numeric_assumptions() -> Non
     assert validation_by_cell["B6"].operator == "between"
     assert validation_by_cell["B12"].type == "whole"
     assert validation_by_cell["B13"].type == "whole"
+
+
+@pytest.mark.skipif(shutil.which("soffice") is None, reason="LibreOffice is not installed")
+@pytest.mark.parametrize(
+    ("project_cost", "debt_pct"),
+    [(0, 50), (1_000_000, 0)],
+    ids=("zero-project-cost", "zero-debt"),
+)
+def test_excel_workbook_handles_zero_cost_or_zero_debt(
+    tmp_path: Path, project_cost: float, debt_pct: float
+) -> None:
+    """Zero-cost and zero-debt scenarios should not produce formula errors."""
+    projection = {
+        "project_name": "Zero-value edge case",
+        "project_type": "Other",
+        "currency": "INR",
+        "project_cost": project_cost,
+        "debt": project_cost * debt_pct / 100,
+        "equity": project_cost * (1 - debt_pct / 100),
+        "model_inputs": {
+            "debt_pct": debt_pct,
+            "monthly_revenue": 0,
+            "growth_pct": 0,
+            "variable_cost_pct": 40,
+            "monthly_fixed_cost": 0,
+            "interest_pct": 10,
+            "loan_years": 5,
+            "projection_years": 1,
+        },
+        "annual_projection": [],
+    }
+    source = tmp_path / "zero-case.xlsx"
+    source.write_bytes(build_excel_report(projection))
+    calculated_path = recalculate_with_libreoffice(
+        source, tmp_path / "calculated", tmp_path / "lo-profile"
+    )
+    workbook = load_workbook(calculated_path, data_only=True)
+    assumptions = workbook["Assumptions"]
+    summary = workbook["Executive Summary"]
+
+    assert assumptions["B10"].value == pytest.approx(project_cost * debt_pct / 100)
+    assert assumptions["C10"].value == pytest.approx(0)
+    assert assumptions["G10"].value == pytest.approx(0)
+    assert assumptions["H10"].value == pytest.approx(0)
+    assert assumptions["I10"].value == pytest.approx(0)
+    assert assumptions["J10"].value in (None, "")
+    assert summary["D5"].value in (None, "")
+    assert_no_formula_errors(workbook)
