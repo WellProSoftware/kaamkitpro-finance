@@ -37,8 +37,9 @@ def recalculate_with_libreoffice(source: Path, output_dir: Path, profile: Path) 
 
 def assert_no_formula_errors(workbook) -> None:
     for sheet_name, cell_range in (
-        ("Assumptions", ("A10", "M12")),
-        ("Executive Summary", ("A8", "F10")),
+        # Scan the complete supported forecast area, not only the first few years.
+        ("Assumptions", ("A10", "M109")),
+        ("Executive Summary", ("A8", "F107")),
     ):
         sheet = workbook[sheet_name]
         start, end = cell_range
