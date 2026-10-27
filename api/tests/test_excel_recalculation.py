@@ -219,3 +219,44 @@ def test_excel_workbook_handles_zero_cost_or_zero_debt(
     else:
         assert summary["D5"].value == pytest.approx(0)
     assert_no_formula_errors(workbook)
+
+
+@pytest.mark.skipif(shutil.which("soffice") is None, reason="LibreOffice is not installed")
+def test_excel_workbook_supports_full_100_year_projection(tmp_path: Path) -> None:
+    """The maximum supported horizon should populate year 100 and no later rows."""
+    projection = {
+        "project_name": "Maximum horizon test",
+        "project_type": "Other",
+        "currency": "INR",
+        "project_cost": 1_000_000,
+        "debt": 1_000_000,
+        "equity": 0,
+        "model_inputs": {
+            "debt_pct": 100,
+            "monthly_revenue": 10_000,
+            "growth_pct": 0,
+            "variable_cost_pct": 50,
+            "monthly_fixed_cost": 1_000,
+            "interest_pct": 0,
+            "loan_years": 30,
+            "projection_years": 100,
+        },
+        "annual_projection": [],
+    }
+    source = tmp_path / "maximum-horizon.xlsx"
+    source.write_bytes(build_excel_report(projection))
+    calculated_path = recalculate_with_libreoffice(
+        source, tmp_path / "calculated", tmp_path / "lo-profile"
+    )
+    workbook = load_workbook(calculated_path, data_only=True)
+    assumptions = workbook["Assumptions"]
+    summary = workbook["Executive Summary"]
+
+    assert assumptions["A10"].value == 1
+    assert assumptions["A39"].value == 30
+    assert assumptions["A109"].value == 100
+    assert assumptions["C109"].value == pytest.approx(120_000)
+    assert summary["A107"].value == 100
+    assert summary["B107"].value == pytest.approx(120_000)
+    assert assumptions["A110"].value in (None, "")
+    assert_no_formula_errors(workbook)
