@@ -269,6 +269,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     notes.append(["Profit before tax shown is before depreciation and tax; it is not net profit."])
     notes.append(["Edit yellow cells on Model Inputs; the annual forecast, summary and chart recalculate in Excel."])
     notes.append(["Review assumptions and formulas with a qualified finance professional before submitting to a lender or investor."])
+    notes.append(["PDF exports use the assumptions submitted to the API; workbook-only edits are not reflected in a PDF unless those updated assumptions are submitted again."])
     notes.column_dimensions["A"].width = 115
     for cell in notes[1]:
         cell.fill = PatternFill("solid", fgColor=NAVY)
