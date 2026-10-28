@@ -155,7 +155,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
         ws.oddFooter.center.text = "KaamKitPro Finance | Illustrative planning estimate"
         ws.oddFooter.right.text = "Page &P of &N"
 
-    for ws, end_col in ((summary, 6), (assumptions, 13), (inputs, 2), (notes, 1)):
+    for ws, end_col in ((summary, 6), (assumptions, 14), (inputs, 2), (notes, 1)):
         ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=end_col)
         ws["A1"].fill = PatternFill("solid", fgColor=NAVY)
         ws["A1"].font = Font(bold=True, color=WHITE, size=16)
