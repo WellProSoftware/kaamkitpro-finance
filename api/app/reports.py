@@ -25,6 +25,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     summary.title = "Executive Summary"
     assumptions = wb.create_sheet("Assumptions")
     inputs = wb.create_sheet("Model Inputs")
+    costs = wb.create_sheet("Project Cost Breakdown")
     notes = wb.create_sheet("Read Me")
 
     name = projection.get("project_name", "New Project")
@@ -102,6 +103,47 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     inputs.column_dimensions["B"].width = 24
     inputs.freeze_panes = "A2"
 
+    # Editable cost-planning worksheet. This breakdown is a planning aid and is
+    # intentionally separate from Model Inputs!B5 until the user confirms that
+    # the detailed line items should replace the existing project-cost baseline.
+    costs.append(["KAAMKITPRO FINANCE | PROJECT COST BREAKDOWN"])
+    costs.append(["Cost category", "Estimated cost (INR)", "Basis / note"])
+    cost_rows = [
+        ("Outsourcing", 1_500_000, "User-provided starting estimate"),
+        ("Warehouse setup", 2_000_000, "User-provided minimum estimate"),
+        ("Hospital setup / expansion", 0, "Enter estimate; zero means not yet specified"),
+        ("Retail / pharmacy setup or expansion", 0, "Enter estimate; zero means not yet specified"),
+        ("Optical setup or expansion", 0, "Enter estimate; zero means not yet specified"),
+        ("Equipment and technology", 0, "Enter estimate; zero means not yet specified"),
+        ("Licences, deposits and professional fees", 0, "Enter estimate; zero means not yet specified"),
+        ("Initial inventory and working capital", 0, "Enter estimate; zero means not yet specified"),
+        ("Other project costs", 0, "Enter estimate; zero means not yet specified"),
+    ]
+    for label, amount, note in cost_rows:
+        costs.append([label, amount, note])
+    costs.append(["Total itemized project costs", "=SUM(B3:B11)", "Formula-driven total; reconcile before using in funding plan"])
+    costs["B12"].number_format = '"INR " #,##0.00'
+    for row in range(3, 12):
+        costs.cell(row, 2).number_format = '"INR " #,##0.00'
+        costs.cell(row, 2).fill = PatternFill("solid", fgColor="FFF2CC")
+        costs.cell(row, 2).protection = costs.cell(row, 2).protection.copy(locked=False)
+        costs.cell(row, 2).data_type = "n"
+    costs["A12"].font = Font(bold=True)
+    costs["B12"].font = Font(bold=True)
+    costs["B12"].fill = PatternFill("solid", fgColor=GREEN)
+    costs.column_dimensions["A"].width = 38
+    costs.column_dimensions["B"].width = 24
+    costs.column_dimensions["C"].width = 64
+    costs.freeze_panes = "A3"
+    costs.auto_filter.ref = "A2:C11"
+    from openpyxl.worksheet.datavalidation import DataValidation
+    cost_validation = DataValidation(type="decimal", operator="greaterThanOrEqual", formula1="0", allow_blank=False)
+    cost_validation.errorTitle = "Invalid cost"
+    cost_validation.error = "Enter a non-negative cost in INR."
+    cost_validation.showErrorMessage = True
+    costs.add_data_validation(cost_validation)
+    cost_validation.add("B3:B11")
+
     # Detailed projection formulas refer to editable inputs; no fixed forecast values.
     assumptions.append(["KAAMKITPRO FINANCE | LIVE ANNUAL PROJECTION"])
     assumptions.append(["Project name", "='Model Inputs'!B2"])
@@ -145,7 +187,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     summary["A110"] = "Planning note"
     summary["B110"] = "Illustrative estimate only; validate assumptions before lending or investment decisions."
 
-    for ws in (summary, assumptions, inputs, notes):
+    for ws in (summary, assumptions, inputs, costs, notes):
         ws.sheet_view.showGridLines = False
         ws.sheet_properties.pageSetUpPr.fitToPage = True
         ws.page_setup.fitToWidth = 1
@@ -155,14 +197,14 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
         ws.oddFooter.center.text = "KaamKitPro Finance | Illustrative planning estimate"
         ws.oddFooter.right.text = "Page &P of &N"
 
-    for ws, end_col in ((summary, 6), (assumptions, 14), (inputs, 2), (notes, 1)):
+    for ws, end_col in ((summary, 6), (assumptions, 14), (inputs, 2), (costs, 3), (notes, 1)):
         ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=end_col)
         ws["A1"].fill = PatternFill("solid", fgColor=NAVY)
         ws["A1"].font = Font(bold=True, color=WHITE, size=16)
         ws["A1"].alignment = Alignment(vertical="center")
         ws.row_dimensions[1].height = 30
 
-    for ws, header_row in ((summary,7),(assumptions,9)):
+    for ws, header_row in ((summary,7),(assumptions,9),(costs,2)):
         for cell in ws[header_row]:
             cell.fill = PatternFill("solid", fgColor=BLUE)
             cell.font = Font(bold=True, color=WHITE)
