@@ -46,6 +46,43 @@ not include the production domain until a separately approved production plan.
 
 The request fields and validation rules are visible in the FastAPI docs at `/docs`.
 
+### Itemized project costs
+
+All three POST endpoints accept an optional `itemized_costs` object. When supplied, its
+values become the project cost used by the projection, debt/equity split, Excel workbook,
+and PDF report. Values are INR amounts and must be finite and non-negative; the total
+must not exceed INR 1,000,000,000,000,000. Unknown category names are rejected with HTTP 422.
+
+Supported category names are exact and case-sensitive:
+
+- `Outsourcing`
+- `Warehouse setup`
+- `Hospital setup / expansion`
+- `Retail / pharmacy setup or expansion`
+- `Optical setup or expansion`
+- `Equipment and technology`
+- `Licences, deposits and professional fees`
+- `Initial inventory and working capital`
+- `Other project costs`
+
+Example request fragment:
+
+```json
+{
+  "project_cost": 3500000,
+  "debt_pct": 60,
+  "itemized_costs": {
+    "Outsourcing": 1500000,
+    "Warehouse setup": 2000000
+  }
+}
+```
+
+In this example, itemized costs override `project_cost` and produce a total project cost
+of INR 3,500,000, debt of INR 2,100,000, and equity of INR 1,400,000. Categories omitted
+from the object are treated as zero in the Excel cost breakdown. If `itemized_costs` is
+omitted, the API uses the supplied aggregate `project_cost` as before.
+
 ## Container
 
 Build from this directory:
