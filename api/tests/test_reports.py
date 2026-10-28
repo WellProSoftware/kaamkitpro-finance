@@ -187,6 +187,17 @@ def test_pdf_report_includes_debt_balance_data():
     assert len(content) > 1000
 
 
+def test_pdf_report_includes_profit_and_break_even_columns():
+    projection = sample_projection()
+    projection["annual_projection"][0]["break_even_revenue"] = 360_000
+    content = build_pdf_report(projection)
+
+    assert b"PBT before depreciation" in content
+    assert b"Break-even revenue" in content
+    assert b"234,000" in content
+    assert b"360000" in content
+
+
 def test_excel_readme_discloses_equal_principal_not_emi():
     workbook = workbook_for()
     notes = workbook["Read Me"]
