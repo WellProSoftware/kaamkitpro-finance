@@ -222,5 +222,10 @@ def test_itemized_costs_reject_unknown_categories_and_negative_amounts():
         "/api/projection",
         json={**payload(), "itemized_costs": {"Outsourcing": -1}},
     )
+    oversized_total = client.post(
+        "/api/projection",
+        json={**payload(), "itemized_costs": {"Outsourcing": 1_000_000_000_000_001}},
+    )
     assert unknown.status_code == 422
     assert negative.status_code == 422
+    assert oversized_total.status_code == 422
