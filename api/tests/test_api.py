@@ -301,3 +301,30 @@ def test_projection_supports_zero_interest_rate():
         row["debt_service"] == row["principal"]
         for row in body["annual_projection"]
     )
+
+def test_projection_handles_total_revenue_decline_after_year_one():
+    response = client.post(
+        "/api/projection",
+        json={**payload(), "growth_pct": -100, "projection_years": 3},
+    )
+
+    assert response.status_code == 200
+    rows = response.json()["annual_projection"]
+    assert rows[0]["revenue"] == payload()["monthly_revenue"] * 12
+    assert rows[1]["revenue"] == 0
+    assert rows[2]["revenue"] == 0
+    assert all(row["variable_cost"] == 0 for row in rows[1:])
+
+
+def test_projection_applies_maximum_supported_growth_rate_consistently():
+    response = client.post(
+        "/api/projection",
+        json={**payload(), "growth_pct": 500, "projection_years": 3},
+    )
+
+    assert response.status_code == 200
+    rows = response.json()["annual_projection"]
+    first_year_revenue = payload()["monthly_revenue"] * 12
+    assert rows[0]["revenue"] == first_year_revenue
+    assert rows[1]["revenue"] == first_year_revenue * 6
+    assert rows[2]["revenue"] == first_year_revenue * 36
