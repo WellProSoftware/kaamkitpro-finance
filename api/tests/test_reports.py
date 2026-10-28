@@ -349,3 +349,11 @@ def test_pdf_and_excel_exports_start_from_same_project_funding_inputs():
     assert f"Project cost: INR {projection['project_cost']:,.0f}".encode() in pdf
     assert f"Debt: INR {projection['debt']:,.0f}".encode() in pdf
     assert f"Equity: INR {projection['equity']:,.0f}".encode() in pdf
+
+def test_pdf_report_escapes_user_supplied_project_text():
+    projection = sample_projection()
+    projection["project_name"] = "Project (Phase 1) \\ Finance"
+    content = build_pdf_report(projection)
+
+    assert content.startswith(b"%PDF")
+    assert b"Project \\(Phase 1\\) \\\\ Finance" in content
