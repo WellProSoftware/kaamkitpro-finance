@@ -148,3 +148,25 @@ def test_report_endpoints_include_download_filenames():
     pdf = client.post("/api/reports/pdf", json=payload())
     assert "filename=\"kaamkitpro-finance-projection.xlsx\"" in excel.headers["content-disposition"]
     assert "filename=\"kaamkitpro-finance-projection.pdf\"" in pdf.headers["content-disposition"]
+
+
+def test_pdf_and_excel_endpoints_use_the_same_submitted_funding_assumptions():
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    request = {**payload(), "project_cost": 3_500_000, "debt_pct": 60}
+    excel_response = client.post("/api/reports/excel", json=request)
+    pdf_response = client.post("/api/reports/pdf", json=request)
+
+    assert excel_response.status_code == 200
+    assert pdf_response.status_code == 200
+    workbook = load_workbook(BytesIO(excel_response.content), data_only=False)
+    inputs = workbook["Model Inputs"]
+    pdf = pdf_response.content
+
+    assert inputs["B15"].value == request["project_cost"]
+    assert inputs["B6"].value == request["debt_pct"]
+    assert f"Project cost: INR {request['project_cost']:,.0f}".encode() in pdf
+    assert f"Debt: INR {request['project_cost'] * request['debt_pct'] / 100:,.0f}".encode() in pdf
+    assert f"Equity: INR {request['project_cost'] * (1 - request['debt_pct'] / 100):,.0f}".encode() in pdf
