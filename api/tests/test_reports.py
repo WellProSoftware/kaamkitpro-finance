@@ -227,3 +227,31 @@ def test_reports_keep_currency_consistent_with_inr_only_model():
     pdf = build_pdf_report(projection)
     assert b"Currency: INR" in pdf
     assert b"Project cost: INR" in pdf
+
+
+def test_pdf_report_paginates_long_forecasts_and_keeps_all_years():
+    """Long forecasts should continue onto additional pages instead of being clipped."""
+    projection = sample_projection()
+    projection["annual_projection"] = [
+        {
+            "year": year,
+            "opening_debt": max(0, 600_000 - (year - 1) * 120_000),
+            "revenue": 900_000 * (1.05 ** (year - 1)),
+            "variable_cost": 400_000,
+            "fixed_cost": 200_000,
+            "ebitda": 300_000,
+            "interest": 66_000,
+            "principal": 120_000,
+            "closing_debt": max(0, 600_000 - year * 120_000),
+            "dscr": 1.61,
+            "cash_after_debt_service": 114_000,
+        }
+        for year in range(1, 81)
+    ]
+
+    content = build_pdf_report(projection)
+
+    assert content.startswith(b"%PDF")
+    assert content.count(b"/Type /Page /Parent") >= 2
+    assert b"(80 |" in content
+    assert b"(Year | Opening debt" in content
