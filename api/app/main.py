@@ -66,7 +66,10 @@ def make_projection(data: ProjectionInput) -> dict[str, Any]:
         for category, amount in data.itemized_costs.items():
             if not isfinite(float(amount)) or float(amount) < 0:
                 raise ValueError(f"{category} must be a finite non-negative amount")
-        values["project_cost"] = round(sum(float(v) for v in data.itemized_costs.values()), 2)
+        itemized_total = sum(float(v) for v in data.itemized_costs.values())
+        if not isfinite(itemized_total) or itemized_total > 1_000_000_000_000_000:
+            raise ValueError("Total itemized project costs exceed the supported limit")
+        values["project_cost"] = round(itemized_total, 2)
     result = build_projection(values)
     if data.itemized_costs is not None:
         result["model_inputs"]["itemized_costs"] = data.itemized_costs
