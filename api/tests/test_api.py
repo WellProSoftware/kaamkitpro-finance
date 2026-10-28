@@ -252,3 +252,20 @@ def test_projection_handles_one_hundred_percent_variable_cost():
     body = response.json()
     assert all(row["break_even_revenue"] is None for row in body["annual_projection"])
     assert all(row["variable_cost"] == row["revenue"] for row in body["annual_projection"])
+
+def test_loan_is_fully_repaid_after_term_and_interest_stops():
+    response = client.post(
+        "/api/projection",
+        json={**payload(), "project_cost": 1_000_000, "debt_pct": 60, "loan_years": 5, "projection_years": 7},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    schedule = body["debt_schedule"]
+
+    assert len(schedule) == 7
+    assert schedule[4]["closing_balance"] == 0
+    assert schedule[5]["opening_balance"] == 0
+    assert schedule[5]["principal_repayment"] == 0
+    assert schedule[5]["interest_payment"] == 0
+    assert schedule[5]["total_debt_service"] == 0
+    assert schedule[6]["closing_balance"] == 0
