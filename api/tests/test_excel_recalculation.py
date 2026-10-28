@@ -341,13 +341,17 @@ def test_excel_forecast_matches_api_model_calculations(tmp_path: Path) -> None:
 
     # Workbook rows 10 onward map to API forecast rows starting at year 1.
     fields = {
+        "opening_debt": "B",
         "revenue": "C",
         "variable_cost": "D",
         "fixed_cost": "E",
         "ebitda": "F",
         "interest": "G",
         "principal": "H",
+        "debt_service": "I",
         "closing_debt": "L",
+        "profit_before_tax_before_depreciation": "M",
+        "break_even_revenue": "N",
         "cash_after_debt_service": "K",
     }
     for index, expected in enumerate(projection["annual_projection"], start=10):
