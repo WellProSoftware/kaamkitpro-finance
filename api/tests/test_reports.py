@@ -357,3 +357,13 @@ def test_pdf_report_escapes_user_supplied_project_text():
 
     assert content.startswith(b"%PDF")
     assert b"Project \\(Phase 1\\) \\\\ Finance" in content
+
+def test_pdf_report_replaces_non_ascii_project_text_without_corrupting_pdf():
+    projection = sample_projection()
+    projection["project_name"] = "Café Pharmacy — Delhi"
+
+    content = build_pdf_report(projection)
+
+    assert content.startswith(b"%PDF-1.4")
+    assert b"Project: Caf? Pharmacy ? Delhi" in content
+    assert b"startxref" in content
