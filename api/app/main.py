@@ -1,5 +1,6 @@
 import os
 from typing import Any
+from math import isfinite
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -40,10 +41,35 @@ class ProjectionInput(BaseModel):
     interest_pct: float = Field(default=11, ge=0, le=100)
     loan_years: int = Field(default=7, ge=1, le=30)
     projection_years: int = Field(default=5, ge=1, le=100)
+    itemized_costs: dict[str, float] | None = None
+
+
+ITEMIZED_COST_CATEGORIES = {
+    "Outsourcing",
+    "Warehouse setup",
+    "Hospital setup / expansion",
+    "Retail / pharmacy setup or expansion",
+    "Optical setup or expansion",
+    "Equipment and technology",
+    "Licences, deposits and professional fees",
+    "Initial inventory and working capital",
+    "Other project costs",
+}
 
 
 def make_projection(data: ProjectionInput) -> dict[str, Any]:
-    result = build_projection(data.model_dump())
+    values = data.model_dump(exclude={"itemized_costs"})
+    if data.itemized_costs is not None:
+        unknown = set(data.itemized_costs) - ITEMIZED_COST_CATEGORIES
+        if unknown:
+            raise ValueError("Unknown itemized project cost category")
+        for category, amount in data.itemized_costs.items():
+            if not isfinite(float(amount)) or float(amount) < 0:
+                raise ValueError(f"{category} must be a finite non-negative amount")
+        values["project_cost"] = round(sum(float(v) for v in data.itemized_costs.values()), 2)
+    result = build_projection(values)
+    if data.itemized_costs is not None:
+        result["model_inputs"]["itemized_costs"] = data.itemized_costs
     result["project_name"] = data.project_name
     result["project_type"] = data.project_type
     return result
