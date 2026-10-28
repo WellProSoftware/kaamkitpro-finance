@@ -325,3 +325,27 @@ def test_itemized_cost_basis_drives_project_cost_and_funding_formulas():
         "B14" in str(validation.sqref) and validation.type == "list"
         for validation in inputs.data_validations.dataValidation
     )
+
+
+def test_readme_explains_pdf_uses_submitted_assumptions():
+    workbook = workbook_for()
+    notes = workbook["Read Me"]
+    assert any(
+        "PDF exports use the assumptions submitted to the API" in str(cell.value)
+        and "workbook-only edits are not reflected" in str(cell.value)
+        for row in notes.iter_rows()
+        for cell in row
+    )
+
+
+def test_pdf_and_excel_exports_start_from_same_project_funding_inputs():
+    projection = sample_projection()
+    workbook = workbook_for(projection)
+    inputs = workbook["Model Inputs"]
+    pdf = build_pdf_report(projection)
+
+    assert inputs["B15"].value == projection["project_cost"]
+    assert inputs["B6"].value == projection["model_inputs"]["debt_pct"]
+    assert f"Project cost: INR {projection['project_cost']:,.0f}".encode() in pdf
+    assert f"Debt: INR {projection['debt']:,.0f}".encode() in pdf
+    assert f"Equity: INR {projection['equity']:,.0f}".encode() in pdf
