@@ -56,7 +56,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     # Apply this after assigning values so touching B4 cannot shift appended rows.
     for cell_ref in ("B2", "B3", "B4"):
         inputs[cell_ref].data_type = "s"
-    inputs.append(["Project cost", project_cost])
+    inputs.append(["Project cost (calculated)", f'=IF(B14="Itemized costs",B16,B15)'])
     inputs.append(["Debt funding (%)", debt_pct])
     inputs.append(["Monthly revenue", monthly_revenue])
     inputs.append(["Annual revenue growth (%)", growth_pct])
@@ -65,12 +65,17 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     inputs.append(["Annual interest rate (%)", interest_pct])
     inputs.append(["Loan term (years)", loan_years])
     inputs.append(["Projection period (years)", years])
+    inputs.append(["Project cost basis", "Aggregate input"])
+    inputs.append(["Aggregate project cost", project_cost])
+    inputs.append(["Itemized project costs total", "='Project Cost Breakdown'!B12"])
     inputs["B5"].number_format = '"INR " #,##0.00'
+    inputs["B15"].number_format = '"INR " #,##0.00'
+    inputs["B16"].number_format = '"INR " #,##0.00'
     for cell in ("B6", "B8", "B9", "B11"):
         inputs[cell].number_format = "0.00"
     for cell in ("B7", "B10"):
         inputs[cell].number_format = '"INR " #,##0.00'
-    for cell in ("B5", "B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13"):
+    for cell in ("B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13", "B14", "B15"):
         inputs[cell].fill = PatternFill("solid", fgColor="FFF2CC")
     # Guide spreadsheet users to valid assumptions before formulas recalculate.
     from openpyxl.worksheet.datavalidation import DataValidation
@@ -80,7 +85,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
         ("decimal", "between", "-100", "500", "B8", "Annual revenue growth must be between -100% and 500%."),
         ("decimal", "between", "0", "100", "B9", "Variable cost must be between 0% and 100%."),
         ("decimal", "between", "0", "100", "B11", "Annual interest rate must be between 0% and 100%."),
-        ("decimal", "greaterThanOrEqual", "0", None, "B5", "Project cost cannot be negative."),
+        ("decimal", "greaterThanOrEqual", "0", None, "B15", "Aggregate project cost cannot be negative."),
         ("decimal", "greaterThanOrEqual", "0", None, "B7", "Monthly revenue cannot be negative."),
         ("decimal", "greaterThanOrEqual", "0", None, "B10", "Monthly fixed cost cannot be negative."),
         ("whole", "between", "1", "30", "B12", "Loan term must be a whole number from 1 to 30 years."),
@@ -99,13 +104,21 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
         validation.showInputMessage = True
         inputs.add_data_validation(validation)
         validation.add(inputs[cell])
-    inputs.column_dimensions["A"].width = 30
+    basis_validation = DataValidation(type="list", formula1='"Aggregate input,Itemized costs"', allow_blank=False)
+    basis_validation.errorTitle = "Select a cost basis"
+    basis_validation.error = "Choose Aggregate input or Itemized costs."
+    basis_validation.showErrorMessage = True
+    inputs.add_data_validation(basis_validation)
+    basis_validation.add(inputs["B14"])
+    inputs["B5"].fill = PatternFill("solid", fgColor=GREEN)
+    inputs["B16"].fill = PatternFill("solid", fgColor=LIGHT_GREY)
+    inputs.column_dimensions["A"].width = 34
     inputs.column_dimensions["B"].width = 24
     inputs.freeze_panes = "A2"
 
-    # Editable cost-planning worksheet. This breakdown is a planning aid and is
-    # intentionally separate from Model Inputs!B5 until the user confirms that
-    # the detailed line items should replace the existing project-cost baseline.
+    # Editable cost-planning worksheet. Select "Itemized costs" in Model Inputs
+    # to use this total in the project funding and forecast calculations; the
+    # default "Aggregate input" preserves existing workbook behaviour.
     costs.append(["KAAMKITPRO FINANCE | PROJECT COST BREAKDOWN"])
     costs.append(["Cost category", "Estimated cost (INR)", "Basis / note"])
     cost_rows = [
