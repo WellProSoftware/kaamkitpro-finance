@@ -367,3 +367,51 @@ def test_excel_forecast_matches_api_model_calculations(tmp_path: Path) -> None:
             assert actual_dscr == pytest.approx(expected_dscr, abs=0.01)
 
     assert_no_formula_errors(workbook)
+
+
+@pytest.mark.skipif(shutil.which("soffice") is None, reason="LibreOffice is not installed")
+def test_itemized_cost_selection_recalculates_project_cost_debt_and_equity(tmp_path: Path) -> None:
+    """Selecting itemized costs should flow through funding and annual debt formulas."""
+    source = tmp_path / "itemized-costs.xlsx"
+    source.write_bytes(build_excel_report({
+        "project_name": "Itemized cost integration",
+        "project_type": "Other",
+        "currency": "INR",
+        "project_cost": 2_500_000,
+        "debt": 1_250_000,
+        "equity": 1_250_000,
+        "annual_projection": [],
+        "model_inputs": {
+            "debt_pct": 60,
+            "monthly_revenue": 100_000,
+            "growth_pct": 5,
+            "variable_cost_pct": 40,
+            "monthly_fixed_cost": 20_000,
+            "interest_pct": 10,
+            "loan_years": 5,
+            "projection_years": 3,
+        },
+    }))
+
+    editable = load_workbook(source, data_only=False)
+    editable["Model Inputs"]["B14"] = "Itemized costs"
+    edited_source = tmp_path / "itemized-costs-selected.xlsx"
+    editable.save(edited_source)
+
+    calculated_path = recalculate_with_libreoffice(
+        edited_source, tmp_path / "calculated", tmp_path / "lo-profile"
+    )
+    workbook = load_workbook(calculated_path, data_only=True)
+    inputs = workbook["Model Inputs"]
+    summary = workbook["Executive Summary"]
+    assumptions = workbook["Assumptions"]
+
+    # Outsourcing 1.5m + warehouse 2.0m; all unspecified categories start at zero.
+    assert inputs["B16"].value == pytest.approx(3_500_000)
+    assert inputs["B5"].value == pytest.approx(3_500_000)
+    assert summary["B4"].value == pytest.approx(3_500_000)
+    assert summary["D4"].value == pytest.approx(2_100_000)
+    assert summary["B5"].value == pytest.approx(1_400_000)
+    assert assumptions["B10"].value == pytest.approx(2_100_000)
+    assert assumptions["H10"].value == pytest.approx(420_000)
+    assert_no_formula_errors(workbook)
