@@ -248,6 +248,11 @@ def build_pdf_report(projection: dict[str, Any]) -> bytes:
     rows = []
     for row in projection.get("annual_projection", []):
         dscr = "-" if row.get("dscr") is None else f"{row['dscr']:.2f}x"
+        break_even = (
+            f"{row['break_even_revenue']:,.0f}"
+            if row.get("break_even_revenue") is not None
+            else "-"
+        )
         rows.append(
             f"{row.get('year', '')} | {row.get('opening_debt', 0):,.0f} | "
             f"{row.get('revenue', 0):,.0f} | {row.get('variable_cost', 0):,.0f} | "
@@ -256,7 +261,7 @@ def build_pdf_report(projection: dict[str, Any]) -> bytes:
             f"{row.get('closing_debt', 0):,.0f} | {dscr} | "
             f"{row.get('cash_after_debt_service', 0):,.0f} | "
             f"{row.get('profit_before_tax_before_depreciation', row.get('ebitda', 0) - row.get('interest', 0)):,.0f} | "
-            f"{row['break_even_revenue']:,.0f}" if row.get("break_even_revenue") is not None else "-"
+            f"{break_even}"
         )
     disclaimer = [
         "",
