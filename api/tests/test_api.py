@@ -229,3 +229,26 @@ def test_itemized_costs_reject_unknown_categories_and_negative_amounts():
     assert unknown.status_code == 422
     assert negative.status_code == 422
     assert oversized_total.status_code == 422
+
+def test_projection_handles_zero_debt_without_division_errors():
+    response = client.post(
+        "/api/projection",
+        json={**payload(), "project_cost": 0, "debt_pct": 0},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["debt"] == 0
+    assert body["equity"] == 0
+    assert all(row["debt_service"] == 0 for row in body["annual_projection"])
+    assert all(row["dscr"] is None for row in body["annual_projection"])
+
+
+def test_projection_handles_one_hundred_percent_variable_cost():
+    response = client.post(
+        "/api/projection",
+        json={**payload(), "variable_cost_pct": 100},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert all(row["break_even_revenue"] is None for row in body["annual_projection"])
+    assert all(row["variable_cost"] == row["revenue"] for row in body["annual_projection"])
