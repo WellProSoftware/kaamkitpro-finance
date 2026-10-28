@@ -328,3 +328,22 @@ def test_projection_applies_maximum_supported_growth_rate_consistently():
     assert rows[0]["revenue"] == first_year_revenue
     assert rows[1]["revenue"] == first_year_revenue * 6
     assert rows[2]["revenue"] == first_year_revenue * 36
+
+def test_projection_keeps_fixed_costs_when_revenue_falls_to_zero():
+    response = client.post(
+        "/api/projection",
+        json={
+            **payload(),
+            "growth_pct": -100,
+            "monthly_fixed_cost": 25_000,
+            "projection_years": 2,
+        },
+    )
+
+    assert response.status_code == 200
+    year_two = response.json()["annual_projection"][1]
+    assert year_two["revenue"] == 0
+    assert year_two["variable_cost"] == 0
+    assert year_two["fixed_cost"] == 300_000
+    assert year_two["ebitda"] == -300_000
+    assert year_two["cash_after_debt_service"] < year_two["ebitda"]
