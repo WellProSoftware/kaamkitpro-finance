@@ -306,3 +306,61 @@ def test_excel_loan_is_repaid_at_term_and_interest_stops(tmp_path: Path) -> None
     assert assumptions["I15"].value == pytest.approx(0)
     assert assumptions["L15"].value == pytest.approx(0)
     assert_no_formula_errors(workbook)
+
+
+@pytest.mark.skipif(shutil.which("soffice") is None, reason="LibreOffice is not installed")
+def test_excel_forecast_matches_api_model_calculations(tmp_path: Path) -> None:
+    """The editable workbook and API model should agree for every forecast year."""
+    from app.model import build_projection
+
+    inputs = {
+        "project_name": "Cross-check",
+        "project_type": "Other",
+        "project_cost": 2_500_000,
+        "debt_pct": 65,
+        "monthly_revenue": 180_000,
+        "growth_pct": 8,
+        "variable_cost_pct": 42,
+        "monthly_fixed_cost": 35_000,
+        "interest_pct": 9.5,
+        "loan_years": 7,
+        "projection_years": 12,
+    }
+    projection = build_projection(inputs)
+    source = tmp_path / "cross-check.xlsx"
+    source.write_bytes(build_excel_report({
+        **projection,
+        "project_name": inputs["project_name"],
+        "project_type": inputs["project_type"],
+    }))
+    calculated_path = recalculate_with_libreoffice(
+        source, tmp_path / "calculated", tmp_path / "lo-profile"
+    )
+    workbook = load_workbook(calculated_path, data_only=True)
+    assumptions = workbook["Assumptions"]
+
+    # Workbook rows 10 onward map to API forecast rows starting at year 1.
+    fields = {
+        "revenue": "C",
+        "variable_cost": "D",
+        "fixed_cost": "E",
+        "ebitda": "F",
+        "interest": "G",
+        "principal": "H",
+        "closing_debt": "L",
+        "cash_after_debt_service": "K",
+    }
+    for index, expected in enumerate(projection["annual_projection"], start=10):
+        assert assumptions[f"A{index}"].value == expected["year"]
+        for field, column in fields.items():
+            assert assumptions[f"{column}{index}"].value == pytest.approx(
+                expected[field], abs=0.02
+            )
+        expected_dscr = expected["dscr"]
+        actual_dscr = assumptions[f"J{index}"].value
+        if expected_dscr is None:
+            assert actual_dscr in (None, "")
+        else:
+            assert actual_dscr == pytest.approx(expected_dscr, abs=0.01)
+
+    assert_no_formula_errors(workbook)
