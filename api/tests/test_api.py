@@ -347,3 +347,19 @@ def test_projection_keeps_fixed_costs_when_revenue_falls_to_zero():
     assert year_two["fixed_cost"] == 300_000
     assert year_two["ebitda"] == -300_000
     assert year_two["cash_after_debt_service"] < year_two["ebitda"]
+
+def test_projection_keeps_revenue_constant_with_zero_growth():
+    response = client.post(
+        "/api/projection",
+        json={**payload(), "growth_pct": 0, "projection_years": 5},
+    )
+
+    assert response.status_code == 200
+    rows = response.json()["annual_projection"]
+    expected_annual_revenue = payload()["monthly_revenue"] * 12
+    assert len(rows) == 5
+    assert all(row["revenue"] == expected_annual_revenue for row in rows)
+    assert all(
+        row["variable_cost"] == expected_annual_revenue * payload()["variable_cost_pct"] / 100
+        for row in rows
+    )
