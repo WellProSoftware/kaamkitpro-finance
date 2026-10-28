@@ -155,9 +155,8 @@ def test_excel_model_inputs_have_validation_for_all_numeric_assumptions() -> Non
         for coordinate in str(validation.sqref).split()
     }
 
-    # Numeric inputs B5:B13 must have explicit validation rules, including
-    # project cost, debt %, monthly revenue, growth, costs, interest and terms.
-    assert {f"B{row}" for row in range(5, 14)} <= validated_coordinates
+    # Editable numeric assumptions must have explicit validation rules.
+    assert {f"B{row}" for row in range(6, 14)} | {"B15"} <= validated_coordinates
 
     validation_by_cell = {
         coordinate: validation
