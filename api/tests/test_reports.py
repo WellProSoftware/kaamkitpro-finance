@@ -287,3 +287,20 @@ def test_excel_break_even_revenue_formula_and_zero_margin_handling():
     zero_margin_workbook = workbook_for(projection)
     assert "=IF(OR(A10=" in zero_margin_workbook["Assumptions"]["N10"].value
     assert "'Model Inputs'!$B$9=100" in zero_margin_workbook["Assumptions"]["N10"].value
+
+
+def test_excel_project_cost_breakdown_has_editable_costs_and_formula_total():
+    workbook = workbook_for()
+    costs = workbook["Project Cost Breakdown"]
+
+    assert costs["B3"].value == 1_500_000
+    assert costs["B4"].value == 2_000_000
+    assert costs["B12"].value == "=SUM(B3:B11)"
+    assert costs["B3"].fill.fgColor.rgb.endswith("FFF2CC")
+    assert costs["B4"].fill.fgColor.rgb.endswith("FFF2CC")
+    assert any(
+        "B3:B11" in str(validation.sqref)
+        and validation.type == "decimal"
+        and validation.operator == "greaterThanOrEqual"
+        for validation in costs.data_validations.dataValidation
+    )
