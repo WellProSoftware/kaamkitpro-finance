@@ -170,3 +170,57 @@ def test_pdf_and_excel_endpoints_use_the_same_submitted_funding_assumptions():
     assert f"Project cost: INR {request['project_cost']:,.0f}".encode() in pdf
     assert f"Debt: INR {request['project_cost'] * request['debt_pct'] / 100:,.0f}".encode() in pdf
     assert f"Equity: INR {request['project_cost'] * (1 - request['debt_pct'] / 100):,.0f}".encode() in pdf
+
+
+def test_itemized_costs_drive_projection_and_both_reports():
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    itemized = {
+        "Outsourcing": 1_500_000,
+        "Warehouse setup": 2_000_000,
+        "Hospital setup / expansion": 500_000,
+        "Retail / pharmacy setup or expansion": 0,
+        "Optical setup or expansion": 0,
+        "Equipment and technology": 0,
+        "Licences, deposits and professional fees": 0,
+        "Initial inventory and working capital": 0,
+        "Other project costs": 0,
+    }
+    request = {**payload(), "project_cost": 1_000_000, "debt_pct": 60, "itemized_costs": itemized}
+    projection = client.post("/api/projection", json=request)
+    excel = client.post("/api/reports/excel", json=request)
+    pdf = client.post("/api/reports/pdf", json=request)
+
+    assert projection.status_code == 200
+    assert projection.json()["project_cost"] == 4_000_000
+    assert projection.json()["debt"] == 2_400_000
+    assert projection.json()["equity"] == 1_600_000
+    assert excel.status_code == 200 and pdf.status_code == 200
+
+    workbook = load_workbook(BytesIO(excel.content), data_only=False)
+    inputs = workbook["Model Inputs"]
+    costs = workbook["Project Cost Breakdown"]
+    assert inputs["B14"].value == "Itemized costs"
+    assert inputs["B5"].value == '=IF(B14="Itemized costs",B16,B15)'
+    assert costs["B3"].value == 1_500_000
+    assert costs["B4"].value == 2_000_000
+    assert costs["B5"].value == 500_000
+    assert costs["B12"].value == "=SUM(B3:B11)"
+    assert b"Project cost: INR 4,000,000" in pdf.content
+    assert b"Debt: INR 2,400,000" in pdf.content
+    assert b"Equity: INR 1,600,000" in pdf.content
+
+
+def test_itemized_costs_reject_unknown_categories_and_negative_amounts():
+    unknown = client.post(
+        "/api/projection",
+        json={**payload(), "itemized_costs": {"Mystery cost": 100}},
+    )
+    negative = client.post(
+        "/api/projection",
+        json={**payload(), "itemized_costs": {"Outsourcing": -1}},
+    )
+    assert unknown.status_code == 422
+    assert negative.status_code == 422
