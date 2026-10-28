@@ -255,3 +255,18 @@ def test_pdf_report_paginates_long_forecasts_and_keeps_all_years():
     assert content.count(b"/Type /Page /Parent") >= 2
     assert b"(80 |" in content
     assert b"(Year | Opening debt" in content
+
+
+def test_excel_break_even_revenue_formula_and_zero_margin_handling():
+    workbook = workbook_for()
+    sheet = workbook["Assumptions"]
+
+    assert sheet["N10"].value == '=IF(OR(A10="",\'Model Inputs\'!$B$9=100),"",E10/(1-\'Model Inputs\'!$B$9/100))'
+    assert "Break-even Revenue" in [cell.value for cell in sheet[9]]
+    assert "N" in sheet.auto_filter.ref
+
+    projection = sample_projection()
+    projection["model_inputs"]["variable_cost_pct"] = 100
+    zero_margin_workbook = workbook_for(projection)
+    assert "=IF(OR(A10=" in zero_margin_workbook["Assumptions"]["N10"].value
+    assert "'Model Inputs'!$B$9=100" in zero_margin_workbook["Assumptions"]["N10"].value
