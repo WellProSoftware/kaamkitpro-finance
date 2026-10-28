@@ -195,7 +195,7 @@ def test_pdf_report_includes_profit_and_break_even_columns():
     assert b"PBT before depreciation" in content
     assert b"Break-even revenue" in content
     assert b"234,000" in content
-    assert b"360000" in content
+    assert b"360,000" in content
 
 
 def test_excel_readme_discloses_equal_principal_not_emi():
