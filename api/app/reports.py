@@ -111,7 +111,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     assumptions.append(["Debt", "='Model Inputs'!B5*'Model Inputs'!B6/100"])
     assumptions.append(["Equity", "='Model Inputs'!B5-B6"])
     assumptions.append([])
-    assumptions.append(["Year", "Opening Debt", "Revenue", "Variable Cost", "Fixed Cost", "EBITDA", "Interest", "Principal", "Debt Service", "DSCR", "Cash After Debt Service", "Closing Debt", "Profit Before Tax (Pre-Depreciation)"])
+    assumptions.append(["Year", "Opening Debt", "Revenue", "Variable Cost", "Fixed Cost", "EBITDA", "Interest", "Principal", "Debt Service", "DSCR", "Cash After Debt Service", "Closing Debt", "Profit Before Tax (Pre-Depreciation)", "Break-even Revenue"])
     for year in range(1, 101):
         r = 9 + year
         assumptions.cell(r, 1, f'=IF(ROW()-9<=\'Model Inputs\'!$B$13,ROW()-9,"")')
@@ -127,6 +127,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
         assumptions.cell(r, 11, f'=IF(A{r}="","",F{r}-I{r})')
         assumptions.cell(r, 12, f'=IF(A{r}="","",MAX(0,B{r}-H{r}))')
         assumptions.cell(r, 13, f'=IF(A{r}="","",F{r}-G{r})')
+        assumptions.cell(r, 14, f'=IF(OR(A{r}="",\'Model Inputs\'!$B$9=100),"",E{r}/(1-\'Model Inputs\'!$B$9/100))')
 
     summary.append(["KAAMKITPRO FINANCE | PROJECT SUMMARY"])
     summary.append(["Project", "='Model Inputs'!B2", "Project Type", "='Model Inputs'!B3"])
@@ -168,7 +169,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
             cell.alignment = Alignment(wrap_text=True, vertical="center")
         ws.row_dimensions[header_row].height = 34
 
-    for col, width in enumerate([10,18,18,18,18,18,16,16,18,12,24,18,32],1):
+    for col, width in enumerate([10,18,18,18,18,18,16,16,18,12,24,18,32,22],1):
         assumptions.column_dimensions[get_column_letter(col)].width = width
     for col in "ABCDEF":
         summary.column_dimensions[col].width = 22
@@ -176,14 +177,14 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     summary.freeze_panes = "A8"
     assumptions.freeze_panes = "A10"
     summary.auto_filter.ref = "A7:F107"
-    assumptions.auto_filter.ref = "A9:M109"
+    assumptions.auto_filter.ref = "A9:N109"
 
     money_format = '"INR " #,##0.00;[Red]("INR " #,##0.00);-'
     for r in range(10,110):
-        for col in (2,3,4,5,6,7,8,9,11,12,13):
+        for col in (2,3,4,5,6,7,8,9,11,12,13,14):
             assumptions.cell(r,col).number_format = money_format
         assumptions.cell(r,10).number_format = '0.00"x"'
-        for col in range(1,14):
+        for col in range(1,15):
             assumptions.cell(r,col).border = Border(bottom=THIN_GREY)
     for r in range(8,108):
         for col in (2,3,4,6):
