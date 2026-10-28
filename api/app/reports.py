@@ -65,7 +65,8 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     inputs.append(["Annual interest rate (%)", interest_pct])
     inputs.append(["Loan term (years)", loan_years])
     inputs.append(["Projection period (years)", years])
-    inputs.append(["Project cost basis", "Aggregate input"])
+    itemized_costs = model.get("itemized_costs")
+    inputs.append(["Project cost basis", "Itemized costs" if itemized_costs is not None else "Aggregate input"])
     inputs.append(["Aggregate project cost", project_cost])
     inputs.append(["Itemized project costs total", "='Project Cost Breakdown'!B12"])
     inputs["B5"].number_format = '"INR " #,##0.00'
@@ -132,6 +133,11 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
         ("Initial inventory and working capital", 0, "Enter estimate; zero means not yet specified"),
         ("Other project costs", 0, "Enter estimate; zero means not yet specified"),
     ]
+    if itemized_costs is not None:
+        cost_rows = [
+            (label, float(itemized_costs.get(label, 0)), note)
+            for label, _default, note in cost_rows
+        ]
     for label, amount, note in cost_rows:
         costs.append([label, amount, note])
     costs.append(["Total itemized project costs", "=SUM(B3:B11)", "Formula-driven total; reconcile before using in funding plan"])
