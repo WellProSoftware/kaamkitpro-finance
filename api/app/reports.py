@@ -242,7 +242,8 @@ def build_pdf_report(projection: dict[str, Any]) -> bytes:
     ]
     table_header = (
         "Year | Opening debt | Revenue | Variable cost | Fixed cost | EBITDA | "
-        "Interest | Principal | Closing debt | DSCR | Cash after debt"
+        "Interest | Principal | Closing debt | DSCR | Cash after debt | "
+        "PBT before depreciation | Break-even revenue"
     )
     rows = []
     for row in projection.get("annual_projection", []):
@@ -253,7 +254,9 @@ def build_pdf_report(projection: dict[str, Any]) -> bytes:
             f"{row.get('fixed_cost', 0):,.0f} | {row.get('ebitda', 0):,.0f} | "
             f"{row.get('interest', 0):,.0f} | {row.get('principal', 0):,.0f} | "
             f"{row.get('closing_debt', 0):,.0f} | {dscr} | "
-            f"{row.get('cash_after_debt_service', 0):,.0f}"
+            f"{row.get('cash_after_debt_service', 0):,.0f} | "
+            f"{row.get('profit_before_tax_before_depreciation', row.get('ebitda', 0) - row.get('interest', 0)):,.0f} | "
+            f"{row.get('break_even_revenue', 0) if row.get('break_even_revenue') is not None else '-'}"
         )
     disclaimer = [
         "",
