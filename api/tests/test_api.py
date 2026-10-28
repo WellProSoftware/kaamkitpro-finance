@@ -363,3 +363,18 @@ def test_projection_keeps_revenue_constant_with_zero_growth():
         row["variable_cost"] == expected_annual_revenue * payload()["variable_cost_pct"] / 100
         for row in rows
     )
+
+def test_projection_applies_negative_growth_as_compound_decline():
+    response = client.post(
+        "/api/projection",
+        json={**payload(), "growth_pct": -50, "projection_years": 3},
+    )
+
+    assert response.status_code == 200
+    rows = response.json()["annual_projection"]
+    first_year_revenue = payload()["monthly_revenue"] * 12
+    assert [row["revenue"] for row in rows] == [
+        first_year_revenue,
+        first_year_revenue * 0.5,
+        first_year_revenue * 0.25,
+    ]
