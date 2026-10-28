@@ -378,3 +378,19 @@ def test_projection_applies_negative_growth_as_compound_decline():
         first_year_revenue * 0.5,
         first_year_revenue * 0.25,
     ]
+
+def test_projection_break_even_equals_fixed_cost_when_variable_cost_is_zero():
+    response = client.post(
+        "/api/projection",
+        json={
+            **payload(),
+            "variable_cost_pct": 0,
+            "monthly_fixed_cost": 40_000,
+            "projection_years": 2,
+        },
+    )
+
+    assert response.status_code == 200
+    rows = response.json()["annual_projection"]
+    assert all(row["variable_cost"] == 0 for row in rows)
+    assert all(row["break_even_revenue"] == 480_000 for row in rows)
