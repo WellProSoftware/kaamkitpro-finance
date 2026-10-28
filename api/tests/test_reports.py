@@ -104,7 +104,7 @@ def test_excel_model_inputs_have_range_validation_and_clear_errors():
     workbook = workbook_for()
     inputs = workbook["Model Inputs"]
     expected_cells = (
-        "B5", "B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13"
+        "B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13", "B15"
     )
     validations = {
         cell: next(
@@ -116,7 +116,7 @@ def test_excel_model_inputs_have_range_validation_and_clear_errors():
     }
 
     expected = {
-        "B5": ("decimal", "greaterThanOrEqual", "0"),
+        "B15": ("decimal", "greaterThanOrEqual", "0"),
         "B6": ("decimal", "between", "0"),
         "B7": ("decimal", "greaterThanOrEqual", "0"),
         "B8": ("decimal", "between", "-100"),
@@ -303,4 +303,25 @@ def test_excel_project_cost_breakdown_has_editable_costs_and_formula_total():
         and validation.type == "decimal"
         and validation.operator == "greaterThanOrEqual"
         for validation in costs.data_validations.dataValidation
+    )
+
+
+def test_itemized_cost_basis_drives_project_cost_and_funding_formulas():
+    workbook = workbook_for()
+    inputs = workbook["Model Inputs"]
+    summary = workbook["Executive Summary"]
+    assumptions = workbook["Assumptions"]
+    costs = workbook["Project Cost Breakdown"]
+
+    assert inputs["B5"].value == '=IF(B14="Itemized costs",B16,B15)'
+    assert inputs["B14"].value == "Aggregate input"
+    assert inputs["B15"].value == sample_projection()["project_cost"]
+    assert inputs["B16"].value == "='Project Cost Breakdown'!B12"
+    assert costs["B12"].value == "=SUM(B3:B11)"
+    assert summary["B4"].value == "='Model Inputs'!B5"
+    assert summary["D4"].value == "='Model Inputs'!B5*'Model Inputs'!B6/100"
+    assert summary["B5"].value == "='Model Inputs'!B5*(1-'Model Inputs'!B6/100)"
+    assert any(
+        "B14" in str(validation.sqref) and validation.type == "list"
+        for validation in inputs.data_validations.dataValidation
     )
