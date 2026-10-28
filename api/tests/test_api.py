@@ -269,3 +269,35 @@ def test_loan_is_fully_repaid_after_term_and_interest_stops():
     assert schedule[5]["interest_payment"] == 0
     assert schedule[5]["total_debt_service"] == 0
     assert schedule[6]["closing_balance"] == 0
+
+def test_projection_supports_zero_and_full_debt_funding_boundaries():
+    no_debt = client.post(
+        "/api/projection",
+        json={**payload(), "project_cost": 1_000_000, "debt_pct": 0},
+    )
+    full_debt = client.post(
+        "/api/projection",
+        json={**payload(), "project_cost": 1_000_000, "debt_pct": 100},
+    )
+
+    assert no_debt.status_code == 200
+    assert no_debt.json()["debt"] == 0
+    assert no_debt.json()["equity"] == 1_000_000
+    assert full_debt.status_code == 200
+    assert full_debt.json()["debt"] == 1_000_000
+    assert full_debt.json()["equity"] == 0
+
+
+def test_projection_supports_zero_interest_rate():
+    response = client.post(
+        "/api/projection",
+        json={**payload(), "interest_pct": 0},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert all(row["interest"] == 0 for row in body["annual_projection"])
+    assert all(
+        row["debt_service"] == row["principal"]
+        for row in body["annual_projection"]
+    )
