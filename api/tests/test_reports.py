@@ -257,6 +257,12 @@ def test_pdf_report_paginates_long_forecasts_and_keeps_all_years():
     assert b"(Year | Opening debt" in content
 
 
+def test_projection_title_spans_break_even_revenue_column():
+    workbook = workbook_for()
+    sheet = workbook["Assumptions"]
+    assert "A1:N1" in {str(rng) for rng in sheet.merged_cells.ranges}
+
+
 def test_excel_break_even_revenue_formula_and_zero_margin_handling():
     workbook = workbook_for()
     sheet = workbook["Assumptions"]
