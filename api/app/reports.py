@@ -230,17 +230,23 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
 
 
 def build_pdf_report(projection: dict[str, Any]) -> bytes:
-    """Return a compact, valid PDF summary using built-in PDF drawing commands."""
-    lines = [
+    """Return a paginated PDF summary with wrapped rows and repeatable headers."""
+    from textwrap import wrap
+
+    heading = [
         "KaamKitPro Finance - Project Projection",
         f"Project: {projection.get('project_name', 'New Project')} | Type: {projection.get('project_type', 'Other')} | Currency: INR",
         f"Project cost: INR {projection.get('project_cost', 0):,.0f} | Debt: INR {projection.get('debt', 0):,.0f} | Equity: INR {projection.get('equity', 0):,.0f}",
         "",
-        "Year | Opening debt | Revenue | Variable cost | Fixed cost | EBITDA | Interest | Principal | Closing debt | DSCR | Cash after debt",
     ]
+    table_header = (
+        "Year | Opening debt | Revenue | Variable cost | Fixed cost | EBITDA | "
+        "Interest | Principal | Closing debt | DSCR | Cash after debt"
+    )
+    rows = []
     for row in projection.get("annual_projection", []):
         dscr = "-" if row.get("dscr") is None else f"{row['dscr']:.2f}x"
-        lines.append(
+        rows.append(
             f"{row.get('year', '')} | {row.get('opening_debt', 0):,.0f} | "
             f"{row.get('revenue', 0):,.0f} | {row.get('variable_cost', 0):,.0f} | "
             f"{row.get('fixed_cost', 0):,.0f} | {row.get('ebitda', 0):,.0f} | "
@@ -248,31 +254,78 @@ def build_pdf_report(projection: dict[str, Any]) -> bytes:
             f"{row.get('closing_debt', 0):,.0f} | {dscr} | "
             f"{row.get('cash_after_debt_service', 0):,.0f}"
         )
-    lines.extend([
+    disclaimer = [
         "",
         "Disclaimer: Illustrative planning estimate only. Equal annual principal repayment is used, not EMI.",
         "Interest is calculated on opening balance. Profit before tax is before depreciation and tax.",
         "This is not an audited statement, loan approval, or bank-approved DPR. Validate assumptions before use.",
-    ])
+    ]
 
     def pdf_escape(value: str) -> str:
         value = value.encode("ascii", "replace").decode("ascii")
         return value.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
-    commands = ["BT", "/F1 7 Tf", "32 560 Td", "10 TL"]
-    for index, line in enumerate(lines):
-        if index:
-            commands.append("T*")
-        commands.append(f"({pdf_escape(line[:180])}) Tj")
-    commands.append("ET")
-    stream = "\n".join(commands).encode("ascii")
-    objects = [
+    # Wrap wide text so project details and disclaimers remain inside page margins.
+    wrapped_heading = []
+    for line in heading:
+        wrapped_heading.extend(wrap(line, width=112) or [""])
+    wrapped_rows = []
+    for row in rows:
+        wrapped_rows.extend(wrap(row, width=112) or [""])
+    wrapped_disclaimer = []
+    for line in disclaimer:
+        wrapped_disclaimer.extend(wrap(line, width=112) or [""])
+
+    # Repeat the report heading and column labels on each page.
+    body_lines = wrapped_rows + wrapped_disclaimer
+    first_page_capacity = 44 - len(wrapped_heading) - 2
+    other_page_capacity = 44 - len(wrapped_heading) - 2
+    page_chunks = []
+    if not body_lines:
+        page_chunks.append([])
+    else:
+        capacity = max(1, first_page_capacity)
+        page_chunks.append(body_lines[:capacity])
+        remaining = body_lines[capacity:]
+        while remaining:
+            page_chunks.append(remaining[:other_page_capacity])
+            remaining = remaining[other_page_capacity:]
+
+    objects: list[bytes] = []
+    page_ids = []
+    content_ids = []
+    # Object IDs: catalog=1, pages=2, font=3, then page/content pairs.
+    objects.extend([
         b"<< /Type /Catalog /Pages 2 0 R >>",
-        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+        b"",  # Filled with the final page references below.
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-        b"<< /Length " + str(len(stream)).encode("ascii") + b" >>\nstream\n" + stream + b"\nendstream",
-    ]
+    ])
+    for page_index, chunk in enumerate(page_chunks):
+        page_id = 4 + page_index * 2
+        content_id = page_id + 1
+        page_ids.append(page_id)
+        content_ids.append(content_id)
+        lines = wrapped_heading + [table_header] + chunk
+        commands = ["BT", "/F1 7 Tf", "32 560 Td", "10 TL"]
+        for line_index, line in enumerate(lines):
+            if line_index:
+                commands.append("T*")
+            commands.append(f"({pdf_escape(line)}) Tj")
+        commands.append("ET")
+        stream = "\n".join(commands).encode("ascii")
+        page_object = (
+            f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] "
+            f"/Resources << /Font << /F1 3 0 R >> >> /Contents {content_id} 0 R >>"
+        ).encode("ascii")
+        content_object = (
+            b"<< /Length " + str(len(stream)).encode("ascii") +
+            b" >>\nstream\n" + stream + b"\nendstream"
+        )
+        objects.extend([page_object, content_object])
+
+    kids = " ".join(f"{page_id} 0 R" for page_id in page_ids)
+    objects[1] = f"<< /Type /Pages /Kids [{kids}] /Count {len(page_ids)} >>".encode("ascii")
+
     output = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
     offsets = [0]
     for number, obj in enumerate(objects, start=1):
