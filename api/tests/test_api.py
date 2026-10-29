@@ -407,3 +407,27 @@ def test_projection_rejects_fractional_loan_and_projection_years():
 
     assert fractional_loan.status_code == 422
     assert fractional_projection.status_code == 422
+
+def test_projection_rejects_project_labels_over_field_limits():
+    long_name = client.post(
+        "/api/projection",
+        json={**payload(), "project_name": "P" * 121},
+    )
+    long_type = client.post(
+        "/api/projection",
+        json={**payload(), "project_type": "T" * 81},
+    )
+
+    assert long_name.status_code == 422
+    assert long_type.status_code == 422
+
+
+def test_projection_accepts_project_labels_at_field_limits():
+    response = client.post(
+        "/api/projection",
+        json={**payload(), "project_name": "P" * 120, "project_type": "T" * 80},
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()["project_name"]) == 120
+    assert len(response.json()["project_type"]) == 80
