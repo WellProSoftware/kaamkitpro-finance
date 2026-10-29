@@ -431,3 +431,28 @@ def test_projection_accepts_project_labels_at_field_limits():
     assert response.status_code == 200
     assert len(response.json()["project_name"]) == 120
     assert len(response.json()["project_type"]) == 80
+
+def test_excel_report_has_formula_recalculation_and_input_validations():
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    response = client.post("/api/reports/excel", json=payload())
+    assert response.status_code == 200
+
+    workbook = load_workbook(BytesIO(response.content), data_only=False)
+    inputs = workbook["Model Inputs"]
+    assumptions = workbook["Assumptions"]
+    validations = {
+        validation.sqref.__str__(): validation.type
+        for validation in inputs.data_validations.dataValidation
+    }
+
+    assert workbook.calculation.fullCalcOnLoad is True
+    assert workbook.calculation.forceFullCalc is True
+    assert workbook.calculation.calcMode == "auto"
+    assert "B12" in validations and validations["B12"] == "whole"
+    assert "B13" in validations and validations["B13"] == "whole"
+    assert assumptions["C10"].value.startswith("=IF(")
+    assert assumptions["F10"].value.startswith("=IF(")
+    assert assumptions["N10"].value.startswith("=IF(")
