@@ -394,3 +394,16 @@ def test_projection_break_even_equals_fixed_cost_when_variable_cost_is_zero():
     rows = response.json()["annual_projection"]
     assert all(row["variable_cost"] == 0 for row in rows)
     assert all(row["break_even_revenue"] == 480_000 for row in rows)
+
+def test_projection_rejects_fractional_loan_and_projection_years():
+    fractional_loan = client.post(
+        "/api/projection",
+        json={**payload(), "loan_years": 2.5},
+    )
+    fractional_projection = client.post(
+        "/api/projection",
+        json={**payload(), "projection_years": 3.5},
+    )
+
+    assert fractional_loan.status_code == 422
+    assert fractional_projection.status_code == 422
