@@ -456,3 +456,17 @@ def test_excel_report_has_formula_recalculation_and_input_validations():
     assert assumptions["C10"].value.startswith("=IF(")
     assert assumptions["F10"].value.startswith("=IF(")
     assert assumptions["N10"].value.startswith("=IF(")
+
+def test_long_projection_pdf_is_paginated_and_repeats_report_headers():
+    response = client.post(
+        "/api/reports/pdf",
+        json={**payload(), "projection_years": 100},
+    )
+
+    assert response.status_code == 200
+    pdf = response.content
+    assert b"/Count " in pdf
+    page_count = int(pdf.split(b"/Count ", 1)[1].split(b" ", 1)[0])
+    assert page_count > 1
+    assert pdf.count(b"Year | Opening debt | Revenue") == page_count
+    assert b"This is not an audited statement" in pdf
