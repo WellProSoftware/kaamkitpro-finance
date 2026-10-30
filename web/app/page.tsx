@@ -107,8 +107,11 @@ export default function Home() {
     setSaved(false);
   };
 
+  const itemizedTotal = costLabels.reduce((sum, key) => sum + itemizedCosts[key], 0);
+  const effectiveProjectCost = useItemizedCosts ? itemizedTotal : inputs.projectCost;
+
   const model = useMemo(() => {
-    const debt = inputs.projectCost * inputs.debtPct / 100;
+    const debt = effectiveProjectCost * inputs.debtPct / 100;
     const equity = effectiveProjectCost - debt;
     const variableRate = Math.min(100, Math.max(0, inputs.variableCostPct)) / 100;
     const rows = Array.from({ length: Math.max(1, Math.min(100, inputs.projectionYears || 1)) }, (_, i) => {
@@ -127,7 +130,7 @@ export default function Home() {
         cash: ebitda - debtService };
     });
     return { debt, equity, rows };
-  }, [inputs]);
+  }, [inputs, effectiveProjectCost]);
 
   const exportCsv = () => {
     const headers = ["Year","Revenue","Variable Cost","Fixed Cost","EBITDA","Interest","Principal","Debt Service","DSCR","Break-even Revenue","Cash After Debt Service (Pre-Tax, Pre-Capex)"];
