@@ -587,7 +587,7 @@ def test_excel_and_pdf_annual_rows_reconcile_to_projection_api():
         # Decode PDF text operators and compare the rendered table row as normalized text.
         import re
 
-        pdf_literals = re.findall(r"\\((.*?)(?<!\\)\\) Tj", pdf_text, flags=re.DOTALL)
+        pdf_literals = re.findall(r"\\((.*?)\\) Tj", pdf_text)
         rendered_lines = [re.sub(r"\\s+", " ", value) for value in pdf_literals]
         normalized_values = [re.sub(r"\\s+", " ", value) for value in expected_pdf_values]
         assert all(
