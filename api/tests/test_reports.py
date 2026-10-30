@@ -308,6 +308,24 @@ def test_excel_project_cost_breakdown_has_editable_costs_and_formula_total():
     )
 
 
+def test_excel_itemized_cost_categories_match_api_contract():
+    workbook = workbook_for()
+    costs = workbook["Project Cost Breakdown"]
+    expected_categories = [
+        "Outsourcing",
+        "Warehouse setup",
+        "Hospital setup / expansion",
+        "Retail / pharmacy setup or expansion",
+        "Optical setup or expansion",
+        "Equipment and technology",
+        "Licences, deposits and professional fees",
+        "Initial inventory and working capital",
+        "Other project costs",
+    ]
+
+    assert [costs.cell(row, 1).value for row in range(3, 12)] == expected_categories
+
+
 def test_itemized_cost_basis_drives_project_cost_and_funding_formulas():
     workbook = workbook_for()
     inputs = workbook["Model Inputs"]
