@@ -329,7 +329,7 @@ def build_pdf_report(projection: dict[str, Any]) -> bytes:
     disclaimer = [
         "",
         "Disclaimer: Illustrative planning estimate only. Equal annual principal repayment is used, not EMI.",
-        "Interest is calculated on opening balance. Profit before tax is before depreciation and tax.",\n        "Cash after debt (pre-tax, pre-capex) is EBITDA less interest and principal; it is not free cash flow.",
+        "Interest is calculated on opening balance. Profit before tax is before depreciation and tax.",\n        "Cash after debt (pre-tax, pre-capex) is EBITDA less interest and principal; it is not free cash flow.",\n        "Cash after debt (pre-tax, pre-capex) is EBITDA less interest and principal; it is not free cash flow.",
         "This is not an audited statement, loan approval, or bank-approved DPR. Validate assumptions before use.",
     ]
 
