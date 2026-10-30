@@ -584,7 +584,14 @@ def test_excel_and_pdf_annual_rows_reconcile_to_projection_api():
             "-" if result["break_even_revenue"] is None else f'{result["break_even_revenue"]:,.0f}',
         ]
         # PDF wraps long table rows across text lines to stay within page margins.
-        # Verify every API figure is present without assuming a single-line row.
-        for expected_value in expected_pdf_values:
-            assert expected_value in pdf_text
+        # Decode PDF text operators and compare the rendered table row as normalized text.
+        import re
+
+        pdf_literals = re.findall(r"\\((.*?)(?<!\\)\\) Tj", pdf_text, flags=re.DOTALL)
+        rendered_lines = [re.sub(r"\\s+", " ", value) for value in pdf_literals]
+        normalized_values = [re.sub(r"\\s+", " ", value) for value in expected_pdf_values]
+        assert all(
+            any(value in line for line in rendered_lines)
+            for value in normalized_values
+        )
 
