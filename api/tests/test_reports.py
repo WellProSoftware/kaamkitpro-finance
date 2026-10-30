@@ -116,7 +116,7 @@ def test_excel_model_inputs_have_range_validation_and_clear_errors():
     }
 
     expected = {
-        "B15": ("decimal", "greaterThanOrEqual", "0"),
+        "B15": ("decimal", "between", "0"),
         "B6": ("decimal", "between", "0"),
         "B7": ("decimal", "greaterThanOrEqual", "0"),
         "B8": ("decimal", "between", "-100"),
@@ -301,7 +301,9 @@ def test_excel_project_cost_breakdown_has_editable_costs_and_formula_total():
     assert any(
         "B3:B11" in str(validation.sqref)
         and validation.type == "decimal"
-        and validation.operator == "greaterThanOrEqual"
+        and validation.operator == "between"
+            and validation.formula1 == "0"
+            and validation.formula2 == "1000000000000000"
         for validation in costs.data_validations.dataValidation
     )
 
