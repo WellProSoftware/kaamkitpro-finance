@@ -223,11 +223,19 @@ export default function Home() {
   };
 
   const saveAssumptions = () => {
+    const validationError = inputError || itemizedCostsError;
+    if (validationError) {
+      setExportStatus(validationError);
+      setSaved(false);
+      return;
+    }
     try {
       localStorage.setItem("kaamkitpro-finance-draft", JSON.stringify({ ...inputs, useItemizedCosts, itemizedCosts }));
       setSaved(true);
+      setExportStatus("Project assumptions saved in this browser.");
     } catch {
       setSaved(false);
+      setExportStatus("Could not save this draft. Check browser storage settings and try again.");
     }
   };
 
