@@ -470,3 +470,12 @@ def test_long_projection_pdf_is_paginated_and_repeats_report_headers():
     assert page_count > 1
     assert pdf.count(b"Year | Opening debt | Revenue") == page_count
     assert b"This is not an audited statement" in pdf
+
+def test_projection_cash_after_debt_service_is_ebitda_less_interest_and_principal():
+    response = client.post("/api/projection", json=payload())
+
+    assert response.status_code == 200
+    for row in response.json()["annual_projection"]:
+        expected = row["ebitda"] - row["interest"] - row["principal"]
+        assert row["cash_after_debt_service"] == expected
+        assert row["debt_service"] == row["interest"] + row["principal"]
