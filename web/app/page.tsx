@@ -69,14 +69,14 @@ export default function Home() {
           const validNumber = (value: unknown): value is number =>
             typeof value === "number" && Number.isFinite(value);
           if (
-            typeof draft.projectName === "string" &&
-            typeof draft.projectType === "string" &&
-            validNumber(draft.projectCost) && draft.projectCost >= 0 &&
+            typeof draft.projectName === "string" && draft.projectName.length <= 120 &&
+            typeof draft.projectType === "string" && draft.projectType.length <= 80 &&
+            validNumber(draft.projectCost) && draft.projectCost >= 0 && draft.projectCost <= MAX_PROJECT_COST &&
             validNumber(draft.debtPct) && draft.debtPct >= 0 && draft.debtPct <= 100 &&
-            validNumber(draft.monthlyRevenue) && draft.monthlyRevenue >= 0 &&
+            validNumber(draft.monthlyRevenue) && draft.monthlyRevenue >= 0 && draft.monthlyRevenue <= MAX_PROJECT_COST &&
             validNumber(draft.growthPct) && draft.growthPct >= -100 && draft.growthPct <= 500 &&
             validNumber(draft.variableCostPct) && draft.variableCostPct >= 0 && draft.variableCostPct <= 100 &&
-            validNumber(draft.monthlyFixedCost) && draft.monthlyFixedCost >= 0 &&
+            validNumber(draft.monthlyFixedCost) && draft.monthlyFixedCost >= 0 && draft.monthlyFixedCost <= MAX_PROJECT_COST &&
             validNumber(draft.interestPct) && draft.interestPct >= 0 && draft.interestPct <= 100 &&
             validNumber(draft.loanYears) && Number.isInteger(draft.loanYears) && draft.loanYears >= 1 && draft.loanYears <= 30 &&
             validNumber(draft.projectionYears) && Number.isInteger(draft.projectionYears) && draft.projectionYears >= 1 && draft.projectionYears <= 100
