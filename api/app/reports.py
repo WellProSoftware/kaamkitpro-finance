@@ -400,7 +400,7 @@ def build_pdf_report(projection: dict[str, Any]) -> bytes:
     kids = " ".join(f"{page_id} 0 R" for page_id in page_ids)
     objects[1] = f"<< /Type /Pages /Kids [{kids}] /Count {len(page_ids)} >>".encode("ascii")
 
-    output = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    output = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n% Cash after debt (pre-tax, pre-capex) disclosure\n")
     offsets = [0]
     for number, obj in enumerate(objects, start=1):
         offsets.append(len(output))
