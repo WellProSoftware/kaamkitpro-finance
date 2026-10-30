@@ -272,7 +272,8 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     notes["A1"] = "Important limitations"
     notes.append(["This workbook is an illustrative planning estimate, not an audited financial statement or bank-approved DPR."])
     notes.append(["The debt schedule uses equal annual principal repayments with interest calculated on opening balance; it is not an EMI schedule."])
-    notes.append(["Profit before tax shown is before depreciation and tax; it is not net profit."])\n    notes.append(["Cash after debt service is EBITDA less interest and principal; it is pre-tax and pre-capex, not free cash flow."])
+    notes.append(["Profit before tax shown is before depreciation and tax; it is not net profit."])
+    notes.append(["Cash after debt service is EBITDA less interest and principal; it is pre-tax and pre-capex, not free cash flow."])
     notes.append(["Edit yellow cells on Model Inputs; the annual forecast, summary and chart recalculate in Excel."])
     notes.append(["Review assumptions and formulas with a qualified finance professional before submitting to a lender or investor."])
     notes.append(["PDF exports use the assumptions submitted to the API; workbook-only edits are not reflected in a PDF unless those updated assumptions are submitted again."])
