@@ -64,8 +64,8 @@ def make_projection(data: ProjectionInput) -> dict[str, Any]:
         if unknown:
             raise ValueError("Unknown itemized project cost category")
         for category, amount in data.itemized_costs.items():
-            if not isfinite(float(amount)) or float(amount) < 0:
-                raise ValueError(f"{category} must be a finite non-negative amount")
+            if not isfinite(float(amount)) or float(amount) < 0 or float(amount) > 1_000_000_000_000_000:
+                raise ValueError(f"{category} must be a finite non-negative amount within the supported limit")
         itemized_total = sum(float(v) for v in data.itemized_costs.values())
         if not isfinite(itemized_total) or itemized_total > 1_000_000_000_000_000:
             raise ValueError("Total itemized project costs exceed the supported limit")
