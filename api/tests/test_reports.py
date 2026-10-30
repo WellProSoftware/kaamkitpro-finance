@@ -5,6 +5,7 @@ import pytest
 from openpyxl import load_workbook
 
 from app.reports import build_excel_report, build_pdf_report
+from app.main import ITEMIZED_COST_CATEGORIES
 
 
 def sample_projection():
@@ -324,6 +325,7 @@ def test_excel_itemized_cost_categories_match_api_contract():
     ]
 
     assert [costs.cell(row, 1).value for row in range(3, 12)] == expected_categories
+    assert set(expected_categories) == ITEMIZED_COST_CATEGORIES
 
 
 def test_itemized_cost_basis_drives_project_cost_and_funding_formulas():
