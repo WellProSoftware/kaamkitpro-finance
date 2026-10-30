@@ -101,3 +101,42 @@ python -m pytest -q
 ## Limitations and security
 
 This is an early planning tool, not audited accounts or a lender-approved project report. Tax, depreciation, working capital, detailed cash flow, and full loan amortisation need validation before external financial use. Never commit service-role keys, passwords, or other secrets.
+
+## Financial calculation methodology
+
+The projection is an annual, simplified operating and debt-service model. All monetary
+values are INR.
+
+- **Revenue:** Year 1 revenue is monthly revenue multiplied by 12. Each later year
+  compounds the prior year's revenue by the annual growth assumption.
+- **Variable costs:** Calculated as a percentage of that year's revenue.
+- **Fixed costs:** Monthly fixed costs multiplied by 12; held flat in nominal INR for
+  every forecast year. No fixed-cost inflation is assumed.
+- **EBITDA:** Revenue less variable and fixed operating costs.
+- **Debt and equity:** Project cost multiplied by the debt-funding percentage; equity is
+  the remaining project cost.
+- **Principal:** Equal annual principal repayments over the selected loan term. This is
+  not an EMI calculation and does not model monthly instalments or fees.
+- **Interest:** Annual interest rate applied to the opening debt balance while the loan
+  remains outstanding.
+- **DSCR:** EBITDA divided by total annual debt service (interest plus principal).
+  It is blank/null when there is no debt service; a negative DSCR is possible when EBITDA
+  is negative.
+- **Profit before tax:** EBITDA less interest, before depreciation and tax.
+- **Cash after debt service:** EBITDA less interest and principal. This is pre-tax and
+  pre-capex, and must not be interpreted as free cash flow or cash available for
+  distribution.
+- **Break-even revenue:** Annual fixed costs divided by one minus the variable-cost rate.
+  It is undefined when variable costs are 100% of revenue.
+
+Growth, variable-cost percentage, debt percentage, interest rate, loan term, and forecast
+horizon are bounded by API validation. The Excel workbook provides matching input
+validations and recalculation formulas. The PDF is a snapshot of the assumptions submitted
+to the API; edits made only inside a downloaded workbook are not automatically reflected
+in a separately exported PDF.
+
+The model does not currently include taxes, depreciation, capital expenditure, working
+capital movements, inventory schedules, monthly seasonality, price/volume drivers,
+inflation in fixed costs, grace periods, balloon payments, or monthly EMI amortisation.
+Review these omissions and replace illustrative assumptions with project-specific
+evidence before using outputs for a bank, investor, or operating decision.
