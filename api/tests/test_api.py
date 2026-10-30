@@ -524,3 +524,60 @@ def test_itemized_costs_reject_sum_over_supported_limit():
         }},
     )
     assert response.status_code == 422
+
+
+def test_excel_and_pdf_annual_rows_reconcile_to_projection_api():
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    request = {
+        **payload(),
+        "project_cost": 4_250_000,
+        "debt_pct": 65,
+        "monthly_revenue": 275_000,
+        "growth_pct": 12,
+        "variable_cost_pct": 42,
+        "monthly_fixed_cost": 38_000,
+        "interest_pct": 10.5,
+        "loan_years": 2,
+        "projection_years": 3,
+    }
+    projection_response = client.post("/api/projection", json=request)
+    excel_response = client.post("/api/reports/excel", json=request)
+    pdf_response = client.post("/api/reports/pdf", json=request)
+
+    assert projection_response.status_code == 200
+    assert excel_response.status_code == 200
+    assert pdf_response.status_code == 200
+
+    projection = projection_response.json()
+    workbook = load_workbook(BytesIO(excel_response.content), data_only=False)
+    assumptions = workbook["Assumptions"]
+    summary = workbook["Executive Summary"]
+    pdf_text = pdf_response.content.decode("latin-1")
+
+    for year, result in enumerate(projection["annual_projection"], start=1):
+        row = 9 + year
+        summary_row = 7 + year
+        assert assumptions.cell(row, 1).value.startswith("=IF(ROW()-9<=")
+        assert assumptions.cell(row, 3).value.startswith("=IF(A")
+        assert assumptions.cell(row, 6).value.startswith("=IF(A")
+        assert assumptions.cell(row, 9).value.startswith("=IF(A")
+        assert assumptions.cell(row, 11).value.startswith("=IF(A")
+        assert summary.cell(summary_row, 2).value.startswith("=IF($A")
+        assert summary.cell(summary_row, 6).value.startswith("=IF($A")
+
+        dscr = "-" if result["dscr"] is None else f'{result["dscr"]:.2f}x'
+        break_even = "-" if result["break_even_revenue"] is None else f'{result["break_even_revenue"]:,.0f}'
+        pdf_row = (
+            f'{year} | {result["opening_debt"]:,.0f} | '
+            f'{result["revenue"]:,.0f} | {result["variable_cost"]:,.0f} | '
+            f'{result["fixed_cost"]:,.0f} | {result["ebitda"]:,.0f} | '
+            f'{result["interest"]:,.0f} | {result["principal"]:,.0f} | '
+            f'{result["closing_debt"]:,.0f} | {dscr} | '
+            f'{result["cash_after_debt_service"]:,.0f} | '
+            f'{result["profit_before_tax_before_depreciation"]:,.0f} | {break_even}'
+        )
+        assert pdf_row in pdf_text
+
