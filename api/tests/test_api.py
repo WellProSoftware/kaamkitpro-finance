@@ -504,7 +504,8 @@ def test_reports_label_cash_after_debt_service_as_pre_tax_and_pre_capex():
 def test_itemized_costs_reject_non_finite_and_over_limit_values():
     non_finite = client.post(
         "/api/projection",
-        json={**payload(), "itemized_costs": {"Outsourcing": float("inf")}},
+        content='{"project_cost":1000000,"itemized_costs":{"Outsourcing":Infinity}}',
+        headers={"Content-Type": "application/json"},
     )
     over_limit = client.post(
         "/api/projection",
