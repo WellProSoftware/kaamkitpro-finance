@@ -16,16 +16,16 @@ type Inputs = {
   projectionYears: number;
 };
 
-type CostKey = "Outsourcing" | "Warehouse setup" | "Hospital setup / expansion" | "Retail/pharmacy setup/expansion" | "Optical setup/expansion" | "Equipment and technology" | "Licences, deposits and professional fees" | "Initial inventory and working capital" | "Other project costs";
+type CostKey = "Outsourcing" | "Warehouse setup" | "Hospital setup / expansion" | "Retail / pharmacy setup or expansion" | "Optical setup or expansion" | "Equipment and technology" | "Licences, deposits and professional fees" | "Initial inventory and working capital" | "Other project costs";
 type ItemizedCosts = Record<CostKey, number>;
 const MAX_PROJECT_COST = 1_000_000_000_000_000;
-const costLabels: CostKey[] = ["Outsourcing", "Warehouse setup", "Hospital setup / expansion", "Retail/pharmacy setup/expansion", "Optical setup/expansion", "Equipment and technology", "Licences, deposits and professional fees", "Initial inventory and working capital", "Other project costs"];
+const costLabels: CostKey[] = ["Outsourcing", "Warehouse setup", "Hospital setup / expansion", "Retail / pharmacy setup or expansion", "Optical setup or expansion", "Equipment and technology", "Licences, deposits and professional fees", "Initial inventory and working capital", "Other project costs"];
 const initialCosts: ItemizedCosts = {
   "Outsourcing": 1500000,
   "Warehouse setup": 2000000,
   "Hospital setup / expansion": 0,
-  "Retail/pharmacy setup/expansion": 0,
-  "Optical setup/expansion": 0,
+  "Retail / pharmacy setup or expansion": 0,
+  "Optical setup or expansion": 0,
   "Equipment and technology": 0,
   "Licences, deposits and professional fees": 0,
   "Initial inventory and working capital": 0,
