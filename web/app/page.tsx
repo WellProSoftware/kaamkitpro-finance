@@ -156,7 +156,8 @@ export default function Home() {
     const payload = {
       project_name: inputs.projectName,
       project_type: inputs.projectType,
-      project_cost: effectiveProjectCost,\n      ...(useItemizedCosts ? { itemized_costs: itemizedCosts } : {}),
+      project_cost: effectiveProjectCost,
+      ...(useItemizedCosts ? { itemized_costs: itemizedCosts } : {}),
       debt_pct: inputs.debtPct,
       monthly_revenue: inputs.monthlyRevenue,
       growth_pct: inputs.growthPct,
