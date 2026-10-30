@@ -104,7 +104,7 @@ export default function Home() {
   }, [inputs]);
 
   const exportCsv = () => {
-    const headers = ["Year","Revenue","Variable Cost","Fixed Cost","EBITDA","Interest","Principal","Debt Service","DSCR","Break-even Revenue","Cash After Debt Service"];
+    const headers = ["Year","Revenue","Variable Cost","Fixed Cost","EBITDA","Interest","Principal","Debt Service","DSCR","Break-even Revenue","Cash After Debt Service (Pre-Tax, Pre-Capex)"];
     const lines = [headers, ...model.rows.map((r) => [r.year,r.revenue,r.variableCost,r.fixedCost,r.ebitda,r.interest,r.principal,r.debtService,r.dscr ?? "",r.breakEven ?? "",r.cash])];
     const csv = lines.map((row) => row.map((v) => {
       const s = String(v ?? "");
@@ -222,8 +222,8 @@ export default function Home() {
           </div>
           <div className="card" style={{marginBottom:16}}>
             <h2 className="section-title">Annual financial projection</h2><p className="section-desc">Illustrative operating model · INR</p>
-            <div className="table-wrap"><table><thead><tr><th>Year</th><th>Revenue</th><th>EBITDA</th><th>Debt service</th><th>DSCR</th><th>Cash after debt</th></tr></thead><tbody>{model.rows.map(r=><tr key={r.year}><td>Year {r.year}</td><td>{money(r.revenue)}</td><td className={r.ebitda>=0?"positive":"negative"}>{money(r.ebitda)}</td><td>{money(r.debtService)}</td><td>{r.dscr===null?"—":r.dscr.toFixed(2)+"x"}</td><td className={r.cash>=0?"positive":"negative"}>{money(r.cash)}</td></tr>)}</tbody></table></div>
-            <div className="note">DSCR = EBITDA ÷ scheduled principal and interest. This simplified version excludes tax, depreciation, working capital, detailed monthly amortisation and sector-specific assumptions.</div>
+            <div className="table-wrap"><table><thead><tr><th>Year</th><th>Revenue</th><th>EBITDA</th><th>Debt service</th><th>DSCR</th><th>Cash after debt (pre-tax, pre-capex)</th></tr></thead><tbody>{model.rows.map(r=><tr key={r.year}><td>Year {r.year}</td><td>{money(r.revenue)}</td><td className={r.ebitda>=0?"positive":"negative"}>{money(r.ebitda)}</td><td>{money(r.debtService)}</td><td>{r.dscr===null?"—":r.dscr.toFixed(2)+"x"}</td><td className={r.cash>=0?"positive":"negative"}>{money(r.cash)}</td></tr>)}</tbody></table></div>
+            <div className="note">DSCR = EBITDA ÷ scheduled principal and interest. Cash after debt service = EBITDA less interest and principal; it is pre-tax and pre-capex, not free cash flow. This simplified version excludes tax, depreciation, working capital, detailed monthly amortisation and sector-specific assumptions.</div>
           </div>
           <div className="card">
             <h2 className="section-title">Revenue outlook</h2><p className="section-desc">Projected annual revenue based on the growth assumption.</p>
