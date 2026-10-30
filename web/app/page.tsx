@@ -16,6 +16,21 @@ type Inputs = {
   projectionYears: number;
 };
 
+type CostKey = "Outsourcing" | "Warehouse setup" | "Hospital setup / expansion" | "Retail/pharmacy setup/expansion" | "Optical setup/expansion" | "Equipment and technology" | "Licences, deposits and professional fees" | "Initial inventory and working capital" | "Other project costs";
+type ItemizedCosts = Record<CostKey, number>;
+const costLabels: CostKey[] = ["Outsourcing", "Warehouse setup", "Hospital setup / expansion", "Retail/pharmacy setup/expansion", "Optical setup/expansion", "Equipment and technology", "Licences, deposits and professional fees", "Initial inventory and working capital", "Other project costs"];
+const initialCosts: ItemizedCosts = {
+  "Outsourcing": 1500000,
+  "Warehouse setup": 2000000,
+  "Hospital setup / expansion": 0,
+  "Retail/pharmacy setup/expansion": 0,
+  "Optical setup/expansion": 0,
+  "Equipment and technology": 0,
+  "Licences, deposits and professional fees": 0,
+  "Initial inventory and working capital": 0,
+  "Other project costs": 0,
+};
+
 const initial: Inputs = {
   projectName: "New Project",
   projectType: "Hospital",
@@ -36,6 +51,8 @@ const money = (value: number) => new Intl.NumberFormat("en-IN", {
 
 export default function Home() {
   const [inputs, setInputs] = useState<Inputs>(initial);
+  const [useItemizedCosts, setUseItemizedCosts] = useState(false);
+  const [itemizedCosts, setItemizedCosts] = useState<ItemizedCosts>(initialCosts);
   const [saved, setSaved] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [exportStatus, setExportStatus] = useState("");
@@ -47,7 +64,7 @@ export default function Home() {
       if (raw) {
         const parsed: unknown = JSON.parse(raw);
         if (parsed && typeof parsed === "object") {
-          const draft = parsed as Partial<Inputs>;
+          const draft = parsed as Partial<Inputs> & { useItemizedCosts?: boolean; itemizedCosts?: Partial<ItemizedCosts> };
           const validNumber = (value: unknown): value is number =>
             typeof value === "number" && Number.isFinite(value);
           if (
@@ -64,6 +81,15 @@ export default function Home() {
             validNumber(draft.projectionYears) && Number.isInteger(draft.projectionYears) && draft.projectionYears >= 1 && draft.projectionYears <= 100
           ) {
             setInputs({ ...initial, ...draft });
+            if (typeof draft.useItemizedCosts === "boolean") setUseItemizedCosts(draft.useItemizedCosts);
+            if (draft.itemizedCosts && typeof draft.itemizedCosts === "object") {
+              const restored = { ...initialCosts };
+              for (const key of costLabels) {
+                const value = draft.itemizedCosts[key];
+                if (typeof value === "number" && Number.isFinite(value) && value >= 0) restored[key] = value;
+              }
+              setItemizedCosts(restored);
+            }
             setSaved(true);
           }
         }
@@ -83,7 +109,7 @@ export default function Home() {
 
   const model = useMemo(() => {
     const debt = inputs.projectCost * inputs.debtPct / 100;
-    const equity = inputs.projectCost - debt;
+    const equity = effectiveProjectCost - debt;
     const variableRate = Math.min(100, Math.max(0, inputs.variableCostPct)) / 100;
     const rows = Array.from({ length: Math.max(1, Math.min(100, inputs.projectionYears || 1)) }, (_, i) => {
       const year = i + 1;
@@ -130,7 +156,7 @@ export default function Home() {
     const payload = {
       project_name: inputs.projectName,
       project_type: inputs.projectType,
-      project_cost: inputs.projectCost,
+      project_cost: effectiveProjectCost,\n      ...(useItemizedCosts ? { itemized_costs: itemizedCosts } : {}),
       debt_pct: inputs.debtPct,
       monthly_revenue: inputs.monthlyRevenue,
       growth_pct: inputs.growthPct,
@@ -175,7 +201,7 @@ export default function Home() {
 
   const saveAssumptions = () => {
     try {
-      localStorage.setItem("kaamkitpro-finance-draft", JSON.stringify(inputs));
+      localStorage.setItem("kaamkitpro-finance-draft", JSON.stringify({ ...inputs, useItemizedCosts, itemizedCosts }));
       setSaved(true);
     } catch {
       setSaved(false);
@@ -201,6 +227,8 @@ export default function Home() {
             <div className="field full"><label htmlFor="projectName">Project name</label><input id="projectName" value={inputs.projectName} onChange={(e) => update("projectName", e.target.value)} maxLength={120}/></div>
             <div className="field full"><label htmlFor="projectType">Business type</label><select id="projectType" value={inputs.projectType} onChange={(e) => update("projectType", e.target.value)}>{["Hospital","Pharmacy","Optical","Retail","Warehouse","Manufacturing","Services","Other"].map(x=><option key={x}>{x}</option>)}</select></div>
             <div className="field"><label htmlFor="projectCost">Total project cost (₹)</label><div className="input-wrap"><span>₹</span><input id="projectCost" type="number" min="0" value={inputs.projectCost} onChange={(e) => update("projectCost", e.target.value)}/></div></div>
+            <div className="field full"><label><input type="checkbox" checked={useItemizedCosts} onChange={(e) => { setUseItemizedCosts(e.target.checked); setSaved(false); }} /> Use itemized project costs</label><p className="section-desc">Enter setup costs by category. The total will automatically replace the aggregate project cost for projections and Excel/PDF exports.</p></div>
+            {useItemizedCosts && <div className="field full"><div className="table-wrap"><table><thead><tr><th>Project cost category</th><th>Amount (₹)</th></tr></thead><tbody>{costLabels.map((key) => <tr key={key}><td>{key}</td><td><input aria-label={key} type="number" min="0" value={itemizedCosts[key]} onChange={(e) => { const value = Math.max(0, Number(e.target.value) || 0); setItemizedCosts((prev) => ({ ...prev, [key]: value })); setSaved(false); }} /></td></tr>)}</tbody><tfoot><tr><th>Total itemized project cost</th><th>{money(itemizedTotal)}</th></tr></tfoot></table></div></div>}
             <div className="field"><label htmlFor="debtPct">Loan funding (%)</label><input id="debtPct" type="number" min="0" max="100" value={inputs.debtPct} onChange={(e) => update("debtPct", e.target.value)}/></div>
             <div className="field"><label htmlFor="monthlyRevenue">Monthly revenue (₹)</label><div className="input-wrap"><span>₹</span><input id="monthlyRevenue" type="number" min="0" value={inputs.monthlyRevenue} onChange={(e) => update("monthlyRevenue", e.target.value)}/></div></div>
             <div className="field"><label htmlFor="growthPct">Annual revenue growth (%)</label><input id="growthPct" type="number" min="-100" max="500" value={inputs.growthPct} onChange={(e) => update("growthPct", e.target.value)}/></div>
@@ -216,7 +244,7 @@ export default function Home() {
 
         <section>
           <div className="stats">
-            <div className="stat blue"><span>Total project cost</span><strong>{money(inputs.projectCost)}</strong><small>Initial project investment</small></div>
+            <div className="stat blue"><span>Total project cost</span><strong>{money(effectiveProjectCost)}</strong><small>{useItemizedCosts ? "Total of itemized cost categories" : "Initial project investment"}</small></div>
             <div className="stat"><span>Estimated loan</span><strong>{money(model.debt)}</strong><small>{inputs.debtPct}% of project cost</small></div>
             <div className="stat green"><span>Owner contribution</span><strong>{money(model.equity)}</strong><small>Estimated equity funding</small></div>
           </div>
