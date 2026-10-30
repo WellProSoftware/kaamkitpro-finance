@@ -108,12 +108,23 @@ export default function Home() {
     setSaved(false);
   };
 
+  const inputErrors: string[] = [];
+  if (!Number.isFinite(inputs.projectCost) || inputs.projectCost < 0 || inputs.projectCost > MAX_PROJECT_COST) inputErrors.push('Project cost must be between ₹0 and ₹1,000,000,000,000,000.');
+  if (!Number.isFinite(inputs.debtPct) || inputs.debtPct < 0 || inputs.debtPct > 100) inputErrors.push('Loan funding must be between 0% and 100%.');
+  if (!Number.isFinite(inputs.monthlyRevenue) || inputs.monthlyRevenue < 0 || inputs.monthlyRevenue > MAX_PROJECT_COST) inputErrors.push('Monthly revenue must be a valid non-negative amount.');
+  if (!Number.isFinite(inputs.growthPct) || inputs.growthPct < -100 || inputs.growthPct > 500) inputErrors.push('Annual revenue growth must be between -100% and 500%.');
+  if (!Number.isFinite(inputs.variableCostPct) || inputs.variableCostPct < 0 || inputs.variableCostPct > 100) inputErrors.push('Variable costs must be between 0% and 100%.');
+  if (!Number.isFinite(inputs.monthlyFixedCost) || inputs.monthlyFixedCost < 0 || inputs.monthlyFixedCost > MAX_PROJECT_COST) inputErrors.push('Monthly fixed costs must be a valid non-negative amount.');
+  if (!Number.isFinite(inputs.interestPct) || inputs.interestPct < 0 || inputs.interestPct > 100) inputErrors.push('Annual interest rate must be between 0% and 100%.');
+  if (!Number.isInteger(inputs.loanYears) || inputs.loanYears < 1 || inputs.loanYears > 30) inputErrors.push('Loan tenure must be a whole number from 1 to 30 years.');
+  if (!Number.isInteger(inputs.projectionYears) || inputs.projectionYears < 1 || inputs.projectionYears > 100) inputErrors.push('Projection period must be a whole number from 1 to 100 years.');
+  const inputError = inputErrors[0] ?? '';
   const itemizedTotal = costLabels.reduce((sum, key) => sum + itemizedCosts[key], 0);
   const itemizedCostsValid = costLabels.every((key) => Number.isFinite(itemizedCosts[key]) && itemizedCosts[key] >= 0) && Number.isFinite(itemizedTotal) && itemizedTotal <= MAX_PROJECT_COST;
   const itemizedCostsError = useItemizedCosts && !itemizedCostsValid
     ? `Itemized project costs must have a finite total of no more than ${money(MAX_PROJECT_COST)}. Reduce one or more categories before exporting.`
     : "";
-  const exportsDisabled = exporting !== null || Boolean(itemizedCostsError);
+  const exportsDisabled = exporting !== null || Boolean(itemizedCostsError) || Boolean(inputError);
   const effectiveProjectCost = useItemizedCosts ? (itemizedCostsValid ? itemizedTotal : 0) : inputs.projectCost;
 
   const model = useMemo(() => {
@@ -139,7 +150,7 @@ export default function Home() {
   }, [inputs, effectiveProjectCost]);
 
   const exportCsv = () => {
-    if (itemizedCostsError) { setExportStatus(itemizedCostsError); return; }
+    if (inputError || itemizedCostsError) { setExportStatus(inputError || itemizedCostsError); return; }
     const headers = ["Year","Revenue","Variable Cost","Fixed Cost","EBITDA","Interest","Principal","Debt Service","DSCR","Break-even Revenue","Cash After Debt Service (Pre-Tax, Pre-Capex)"];
     const lines = [headers, ...model.rows.map((r) => [r.year,r.revenue,r.variableCost,r.fixedCost,r.ebitda,r.interest,r.principal,r.debtService,r.dscr ?? "",r.breakEven ?? "",r.cash])];
     const csv = lines.map((row) => row.map((v) => {
@@ -155,7 +166,7 @@ export default function Home() {
   };
 
   const exportReport = async (format: "excel" | "pdf") => {
-    if (itemizedCostsError) { setExportStatus(itemizedCostsError); return; }
+    if (inputError || itemizedCostsError) { setExportStatus(inputError || itemizedCostsError); return; }
     const apiBase = process.env.NEXT_PUBLIC_FINANCE_API_URL?.trim().replace(/\/$/, "");
     if (!apiBase) {
       setExportStatus("Excel/PDF export is ready to connect, but the staging API URL is not configured yet. CSV export remains available.");
@@ -235,6 +246,7 @@ export default function Home() {
       <div className="grid">
         <section className="card">
           <h2 className="section-title">Project assumptions</h2><p className="section-desc">Change any input to recalculate the projection instantly. Figures are in Indian rupees. Drafts stay in this browser.</p>
+          {inputError && <p className="section-desc" role="alert" style={{color:"#b42318",marginBottom:12}}>{inputError}</p>}
           <div className="fields">
             <div className="field full"><label htmlFor="projectName">Project name</label><input id="projectName" value={inputs.projectName} onChange={(e) => update("projectName", e.target.value)} maxLength={120}/></div>
             <div className="field full"><label htmlFor="projectType">Business type</label><select id="projectType" value={inputs.projectType} onChange={(e) => update("projectType", e.target.value)}>{["Hospital","Pharmacy","Optical","Retail","Warehouse","Manufacturing","Services","Other"].map(x=><option key={x}>{x}</option>)}</select></div>
