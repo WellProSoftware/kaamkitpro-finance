@@ -139,6 +139,7 @@ export default function Home() {
   }, [inputs, effectiveProjectCost]);
 
   const exportCsv = () => {
+    if (itemizedCostsError) { setExportStatus(itemizedCostsError); return; }
     const headers = ["Year","Revenue","Variable Cost","Fixed Cost","EBITDA","Interest","Principal","Debt Service","DSCR","Break-even Revenue","Cash After Debt Service (Pre-Tax, Pre-Capex)"];
     const lines = [headers, ...model.rows.map((r) => [r.year,r.revenue,r.variableCost,r.fixedCost,r.ebitda,r.interest,r.principal,r.debtService,r.dscr ?? "",r.breakEven ?? "",r.cash])];
     const csv = lines.map((row) => row.map((v) => {
@@ -154,6 +155,7 @@ export default function Home() {
   };
 
   const exportReport = async (format: "excel" | "pdf") => {
+    if (itemizedCostsError) { setExportStatus(itemizedCostsError); return; }
     const apiBase = process.env.NEXT_PUBLIC_FINANCE_API_URL?.trim().replace(/\/$/, "");
     if (!apiBase) {
       setExportStatus("Excel/PDF export is ready to connect, but the staging API URL is not configured yet. CSV export remains available.");
