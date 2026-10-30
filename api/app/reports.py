@@ -301,6 +301,7 @@ def build_pdf_report(projection: dict[str, Any]) -> bytes:
         "KaamKitPro Finance - Project Projection",
         f"Project: {projection.get('project_name', 'New Project')} | Type: {projection.get('project_type', 'Other')} | Currency: INR",
         f"Project cost: INR {projection.get('project_cost', 0):,.0f} | Debt: INR {projection.get('debt', 0):,.0f} | Equity: INR {projection.get('equity', 0):,.0f}",
+        "Cash after debt (pre-tax, pre-capex) = EBITDA less interest and principal; not free cash flow.",
         "",
     ]
     table_header = (
