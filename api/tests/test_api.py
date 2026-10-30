@@ -479,3 +479,23 @@ def test_projection_cash_after_debt_service_is_ebitda_less_interest_and_principa
         expected = row["ebitda"] - row["interest"] - row["principal"]
         assert row["cash_after_debt_service"] == expected
         assert row["debt_service"] == row["interest"] + row["principal"]
+
+def test_reports_label_cash_after_debt_service_as_pre_tax_and_pre_capex():
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    excel = client.post("/api/reports/excel", json=payload())
+    pdf = client.post("/api/reports/pdf", json=payload())
+
+    assert excel.status_code == 200
+    assert pdf.status_code == 200
+    workbook = load_workbook(BytesIO(excel.content), data_only=False)
+    assumptions = workbook["Assumptions"]
+    summary = workbook["Executive Summary"]
+    notes = workbook["Read Me"]
+
+    assert assumptions["K9"].value == "Cash After Debt Service (Pre-Tax, Pre-Capex)"
+    assert summary["F7"].value == "CASH AFTER DEBT (PRE-TAX)"
+    assert any("not free cash flow" in str(row[0].value) for row in notes.iter_rows())
+    assert b"Cash after debt (pre-tax, pre-capex)" in pdf.content
