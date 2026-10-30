@@ -172,7 +172,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     assumptions.append(["Debt", "='Model Inputs'!B5*'Model Inputs'!B6/100"])
     assumptions.append(["Equity", "='Model Inputs'!B5-B6"])
     assumptions.append([])
-    assumptions.append(["Year", "Opening Debt", "Revenue", "Variable Cost", "Fixed Cost", "EBITDA", "Interest", "Principal", "Debt Service", "DSCR", "Cash After Debt Service", "Closing Debt", "Profit Before Tax (Pre-Depreciation)", "Break-even Revenue"])
+    assumptions.append(["Year", "Opening Debt", "Revenue", "Variable Cost", "Fixed Cost", "EBITDA", "Interest", "Principal", "Debt Service", "DSCR", "Cash After Debt Service (Pre-Tax, Pre-Capex)", "Closing Debt", "Profit Before Tax (Pre-Depreciation)", "Break-even Revenue"])
     for year in range(1, 101):
         r = 9 + year
         assumptions.cell(r, 1, f'=IF(ROW()-9<=\'Model Inputs\'!$B$13,ROW()-9,"")')
@@ -196,7 +196,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     summary.append(["Project Cost", "='Model Inputs'!B5", "Debt Funding", "='Model Inputs'!B5*'Model Inputs'!B6/100"])
     summary.append(["Equity Funding", "='Model Inputs'!B5*(1-'Model Inputs'!B6/100)", "Debt / Equity", '=IF(B5=0,"",D4/B5)'])
     summary.append([])
-    summary.append(["YEAR", "REVENUE", "EBITDA", "DEBT SERVICE", "DSCR", "CASH AFTER DEBT"])
+    summary.append(["YEAR", "REVENUE", "EBITDA", "DEBT SERVICE", "DSCR", "CASH AFTER DEBT (PRE-TAX)"])
     for year in range(1, 101):
         r = 7 + year
         source = 9 + year
@@ -272,7 +272,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     notes["A1"] = "Important limitations"
     notes.append(["This workbook is an illustrative planning estimate, not an audited financial statement or bank-approved DPR."])
     notes.append(["The debt schedule uses equal annual principal repayments with interest calculated on opening balance; it is not an EMI schedule."])
-    notes.append(["Profit before tax shown is before depreciation and tax; it is not net profit."])
+    notes.append(["Profit before tax shown is before depreciation and tax; it is not net profit."])\n    notes.append(["Cash after debt service is EBITDA less interest and principal; it is pre-tax and pre-capex, not free cash flow."])
     notes.append(["Edit yellow cells on Model Inputs; the annual forecast, summary and chart recalculate in Excel."])
     notes.append(["Review assumptions and formulas with a qualified finance professional before submitting to a lender or investor."])
     notes.append(["PDF exports use the assumptions submitted to the API; workbook-only edits are not reflected in a PDF unless those updated assumptions are submitted again."])
