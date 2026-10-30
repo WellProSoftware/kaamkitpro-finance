@@ -88,3 +88,36 @@ def test_pre_depreciation_profit_matches_ebitda_less_interest():
     result = build_projection(sample())
     for row in result["annual_projection"]:
         assert row["profit_before_tax_before_depreciation"] == row["ebitda"] - row["interest"]
+
+
+def test_operating_model_reconciles_revenue_costs_and_ebitda():
+    """Revenue less variable and fixed costs must equal EBITDA each year."""
+    result = build_projection(sample())
+    for row in result["annual_projection"]:
+        assert row["revenue"] - row["variable_cost"] - row["fixed_cost"] == row["ebitda"]
+
+
+def test_cash_after_debt_service_reconciles_ebitda_and_debt_service():
+    """Cash metric is deliberately pre-tax and pre-capex."""
+    result = build_projection(sample())
+    for row in result["annual_projection"]:
+        assert row["ebitda"] - row["debt_service"] == row["cash_after_debt_service"]
+
+
+def test_dscr_uses_ebitda_divided_by_total_debt_service():
+    result = build_projection(sample())
+    for row in result["annual_projection"]:
+        if row["debt_service"]:
+            assert row["dscr"] == round(row["ebitda"] / row["debt_service"], 2)
+        else:
+            assert row["dscr"] is None
+
+
+def test_revenue_growth_compounds_from_prior_year():
+    data = sample()
+    data["projection_years"] = 4
+    data["growth_pct"] = 10
+    rows = build_projection(data)["annual_projection"]
+    assert [row["revenue"] for row in rows] == [
+        18_000_000, 19_800_000, 21_780_000, 23_958_000
+    ]

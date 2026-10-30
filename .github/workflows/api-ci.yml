@@ -39,6 +39,13 @@ jobs:
       - name: Run API tests
         working-directory: api
         run: python -m pytest -q
+      - name: Install LibreOffice for spreadsheet calculation integration test
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y libreoffice-calc
+      - name: Verify Excel formulas recalculate in LibreOffice Calc
+        working-directory: api
+        run: python -m pytest -q tests/test_excel_recalculation.py
       - name: Validate Docker image build
         run: docker build -t kaamkitpro-finance-api:ci api
       - name: Smoke test container health and API docs

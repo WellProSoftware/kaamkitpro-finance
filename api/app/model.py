@@ -77,6 +77,16 @@ def build_projection(data: dict) -> dict:
 
     return {
         "currency": "INR",
+        "model_inputs": {
+            "debt_pct": debt_pct,
+            "monthly_revenue": monthly_revenue,
+            "growth_pct": growth_pct,
+            "variable_cost_pct": variable_cost_pct,
+            "monthly_fixed_cost": monthly_fixed_cost,
+            "interest_pct": interest_pct,
+            "loan_years": loan_years,
+            "projection_years": years,
+        },
         "project_cost": round(project_cost, 2),
         "debt": round(debt, 2),
         "equity": round(equity, 2),
