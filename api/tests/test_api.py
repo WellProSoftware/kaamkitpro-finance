@@ -499,3 +499,27 @@ def test_reports_label_cash_after_debt_service_as_pre_tax_and_pre_capex():
     assert summary["F7"].value == "CASH AFTER DEBT (PRE-TAX)"
     assert any("not free cash flow" in str(row[0].value) for row in notes.iter_rows())
     assert b"Cash after debt (pre-tax, pre-capex)" in pdf.content
+
+
+def test_itemized_costs_reject_non_finite_and_over_limit_values():
+    non_finite = client.post(
+        "/api/projection",
+        json={**payload(), "itemized_costs": {"Outsourcing": float("inf")}},
+    )
+    over_limit = client.post(
+        "/api/projection",
+        json={**payload(), "itemized_costs": {"Outsourcing": 1_000_000_000_000_001}},
+    )
+    assert non_finite.status_code == 422
+    assert over_limit.status_code == 422
+
+
+def test_itemized_costs_reject_sum_over_supported_limit():
+    response = client.post(
+        "/api/projection",
+        json={**payload(), "itemized_costs": {
+            "Outsourcing": 600_000_000_000_000,
+            "Warehouse setup": 500_000_000_000_000,
+        }},
+    )
+    assert response.status_code == 422
