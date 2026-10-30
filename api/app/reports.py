@@ -273,8 +273,8 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     notes.append(["This workbook is an illustrative planning estimate, not an audited financial statement or bank-approved DPR."])
     notes.append(["The debt schedule uses equal annual principal repayments with interest calculated on opening balance; it is not an EMI schedule."])
     notes.append(["Profit before tax shown is before depreciation and tax; it is not net profit."])
-    notes.append(["Cash after debt service is EBITDA less interest and principal; it is pre-tax and pre-capex, not free cash flow."])
     notes.append(["Edit yellow cells on Model Inputs; the annual forecast, summary and chart recalculate in Excel."])
+    notes.append(["Cash after debt service is EBITDA less interest and principal; it is pre-tax and pre-capex, not free cash flow."])
     notes.append(["Review assumptions and formulas with a qualified finance professional before submitting to a lender or investor."])
     notes.append(["PDF exports use the assumptions submitted to the API; workbook-only edits are not reflected in a PDF unless those updated assumptions are submitted again."])
     notes.column_dimensions["A"].width = 115
@@ -329,7 +329,8 @@ def build_pdf_report(projection: dict[str, Any]) -> bytes:
     disclaimer = [
         "",
         "Disclaimer: Illustrative planning estimate only. Equal annual principal repayment is used, not EMI.",
-        "Interest is calculated on opening balance. Profit before tax is before depreciation and tax.",\n        "Cash after debt (pre-tax, pre-capex) is EBITDA less interest and principal; it is not free cash flow.",\n        "Cash after debt (pre-tax, pre-capex) is EBITDA less interest and principal; it is not free cash flow.",
+        "Interest is calculated on opening balance. Profit before tax is before depreciation and tax.",
+        "Cash after debt (pre-tax, pre-capex) is EBITDA less interest and principal; it is not free cash flow.",
         "This is not an audited statement, loan approval, or bank-approved DPR. Validate assumptions before use.",
     ]
 
