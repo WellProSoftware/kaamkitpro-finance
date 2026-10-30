@@ -263,7 +263,18 @@ export default function Home() {
           <div className="card" style={{marginBottom:16}}>
             <h2 className="section-title">Annual financial projection</h2><p className="section-desc">Illustrative operating model · INR</p>
             <div className="table-wrap"><table><thead><tr><th>Year</th><th>Revenue</th><th>EBITDA</th><th>Debt service</th><th>DSCR</th><th>Cash after debt (pre-tax, pre-capex)</th></tr></thead><tbody>{model.rows.map(r=><tr key={r.year}><td>Year {r.year}</td><td>{money(r.revenue)}</td><td className={r.ebitda>=0?"positive":"negative"}>{money(r.ebitda)}</td><td>{money(r.debtService)}</td><td>{r.dscr===null?"—":r.dscr.toFixed(2)+"x"}</td><td className={r.cash>=0?"positive":"negative"}>{money(r.cash)}</td></tr>)}</tbody></table></div>
-            <div className="note">DSCR = EBITDA ÷ scheduled principal and interest. Cash after debt service = EBITDA less interest and principal; it is pre-tax and pre-capex, not free cash flow. This simplified version excludes tax, depreciation, working capital, detailed monthly amortisation and sector-specific assumptions.</div>
+            <div className="note">DSCR = EBITDA ÷ scheduled principal and interest. Cash after debt service = EBITDA less interest and principal; it is pre-tax and pre-capex, not free cash flow.</div>
+            <div className="note" style={{marginTop:12}}>
+              <strong>Model methodology &amp; limitations</strong>
+              <ul style={{margin:"8px 0 0",paddingLeft:20}}>
+                <li>Year 1 revenue is monthly revenue × 12; later years compound the annual growth assumption.</li>
+                <li>Variable costs move with revenue. Monthly fixed costs are annualised and held flat; inflation is not modelled.</li>
+                <li>Debt is repaid using equal annual principal during the loan tenure. Interest is calculated on each year's opening loan balance; this is not a monthly EMI schedule.</li>
+                <li>EBITDA is before interest, depreciation and tax. DSCR compares EBITDA with scheduled principal plus interest.</li>
+                <li>The model does not yet forecast tax, depreciation, capex, working capital movements, inventory, monthly seasonality, or sector-specific operating drivers.</li>
+              </ul>
+              <p style={{margin:"8px 0 0"}}>Treat outputs as planning estimates. Validate assumptions and financing terms with your accountant and lender before relying on them for investment or credit decisions.</p>
+            </div>
           </div>
           <div className="card">
             <h2 className="section-title">Revenue outlook</h2><p className="section-desc">Projected annual revenue based on the growth assumption.</p>
