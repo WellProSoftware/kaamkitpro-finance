@@ -457,3 +457,25 @@ def test_formula_driven_summary_and_forecast_sheets_are_protected():
     assert reopened["Executive Summary"].protection.sheet is True
     assert reopened["Assumptions"].protection.sheet is True
     assert reopened["Assumptions"]["C10"].value == assumptions["C10"].value
+
+def test_itemized_cost_inputs_enforce_per_item_and_aggregate_limits():
+    workbook = workbook_for()
+    costs = workbook["Project Cost Breakdown"]
+    validations = costs.data_validations.dataValidation
+
+    per_item = next(
+        validation for validation in validations
+        if validation.type == "decimal" and "B3:B11" in str(validation.sqref)
+    )
+    aggregate = next(
+        validation for validation in validations
+        if validation.type == "custom" and "B3:B11" in str(validation.sqref)
+    )
+
+    assert per_item.operator == "between"
+    assert per_item.formula1 == "0"
+    assert per_item.formula2 == "1000000000000000"
+    assert per_item.showErrorMessage is True
+    assert aggregate.formula1 == "=SUM($B$3:$B$11)<=1000000000000000"
+    assert aggregate.showErrorMessage is True
+    assert aggregate.errorTitle == "Project cost limit exceeded"
