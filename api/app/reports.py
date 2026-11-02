@@ -1,3 +1,4 @@
+from copy import copy
 from io import BytesIO
 from typing import Any
 
@@ -145,7 +146,9 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     for row in range(3, 12):
         costs.cell(row, 2).number_format = '"INR " #,##0.00'
         costs.cell(row, 2).fill = PatternFill("solid", fgColor="FFF2CC")
-        costs.cell(row, 2).protection = costs.cell(row, 2).protection.copy(locked=False)
+        cell_protection = copy(costs.cell(row, 2).protection)
+        cell_protection.locked = False
+        costs.cell(row, 2).protection = cell_protection
         costs.cell(row, 2).data_type = "n"
     costs["A12"].font = Font(bold=True)
     costs["B12"].font = Font(bold=True)
