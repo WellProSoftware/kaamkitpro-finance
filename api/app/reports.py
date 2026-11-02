@@ -260,6 +260,9 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     assumptions.freeze_panes = "A10"
     summary.auto_filter.ref = "A7:F107"
     assumptions.auto_filter.ref = "A9:N109"
+    # Forecast and summary are formula-driven views; prevent accidental edits.
+    assumptions.protection.sheet = True
+    summary.protection.sheet = True
 
     money_format = '"INR " #,##0.00;[Red]("INR " #,##0.00);-'
     for r in range(10,110):
