@@ -416,3 +416,23 @@ def test_itemized_cost_sheet_protection_survives_excel_save_and_reload():
     assert reopened_costs["B3"].protection.locked is False
     assert reopened_costs["B12"].value == "=SUM(B3:B11)"
     assert reopened_costs["B12"].protection.locked is True
+
+def test_model_inputs_protects_calculated_cells_and_keeps_assumptions_editable():
+    workbook = workbook_for()
+    inputs = workbook["Model Inputs"]
+
+    assert inputs.protection.sheet is True
+    assert inputs["B5"].protection.locked is True
+    assert inputs["B16"].protection.locked is True
+    assert inputs["B4"].protection.locked is True
+    editable_cells = ("B2", "B3", "B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13", "B14", "B15")
+    assert all(inputs[cell].protection.locked is False for cell in editable_cells)
+
+    saved = BytesIO()
+    workbook.save(saved)
+    saved.seek(0)
+    reopened = load_workbook(saved, data_only=False)["Model Inputs"]
+    assert reopened.protection.sheet is True
+    assert reopened["B5"].value == '=IF(B14="Itemized costs",B16,B15)'
+    assert reopened["B5"].protection.locked is True
+    assert reopened["B14"].protection.locked is False
