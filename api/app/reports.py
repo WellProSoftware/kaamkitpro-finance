@@ -158,6 +158,8 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     costs.column_dimensions["C"].width = 64
     costs.freeze_panes = "A3"
     costs.auto_filter.ref = "A2:C11"
+    # Protect formulas against accidental edits while keeping cost inputs editable.
+    costs.protection.sheet = True
     from openpyxl.worksheet.datavalidation import DataValidation
     cost_validation = DataValidation(type="decimal", operator="between", formula1="0", formula2="1000000000000000", allow_blank=False)
     cost_validation.errorTitle = "Invalid cost"
