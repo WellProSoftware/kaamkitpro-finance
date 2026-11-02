@@ -436,3 +436,24 @@ def test_model_inputs_protects_calculated_cells_and_keeps_assumptions_editable()
     assert reopened["B5"].value == '=IF(B14="Itemized costs",B16,B15)'
     assert reopened["B5"].protection.locked is True
     assert reopened["B14"].protection.locked is False
+
+def test_formula_driven_summary_and_forecast_sheets_are_protected():
+    workbook = workbook_for()
+    summary = workbook["Executive Summary"]
+    assumptions = workbook["Assumptions"]
+
+    assert summary.protection.sheet is True
+    assert assumptions.protection.sheet is True
+    assert summary["B4"].value == "='Model Inputs'!B5"
+    assert summary["B4"].protection.locked is True
+    assert assumptions["C10"].data_type == "f"
+    assert assumptions["C10"].protection.locked is True
+    assert assumptions["N10"].protection.locked is True
+
+    saved = BytesIO()
+    workbook.save(saved)
+    saved.seek(0)
+    reopened = load_workbook(saved, data_only=False)
+    assert reopened["Executive Summary"].protection.sheet is True
+    assert reopened["Assumptions"].protection.sheet is True
+    assert reopened["Assumptions"]["C10"].value == assumptions["C10"].value
