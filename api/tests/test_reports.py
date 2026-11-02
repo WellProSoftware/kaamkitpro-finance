@@ -398,3 +398,21 @@ def test_itemized_cost_sheet_protects_formula_and_keeps_cost_inputs_editable():
     assert costs.protection.sheet is True
     assert all(costs.cell(row, 2).protection.locked is False for row in range(3, 12))
     assert costs["B12"].protection.locked is True
+
+def test_itemized_cost_sheet_protection_survives_excel_save_and_reload():
+    workbook = workbook_for()
+    costs = workbook["Project Cost Breakdown"]
+
+    # Simulate an edited workbook being saved and reopened by spreadsheet software.
+    costs["B3"] = 1_750_000
+    saved = BytesIO()
+    workbook.save(saved)
+    saved.seek(0)
+    reopened = load_workbook(saved, data_only=False)
+    reopened_costs = reopened["Project Cost Breakdown"]
+
+    assert reopened_costs.protection.sheet is True
+    assert reopened_costs["B3"].value == 1_750_000
+    assert reopened_costs["B3"].protection.locked is False
+    assert reopened_costs["B12"].value == "=SUM(B3:B11)"
+    assert reopened_costs["B12"].protection.locked is True
