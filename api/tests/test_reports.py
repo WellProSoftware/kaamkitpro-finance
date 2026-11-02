@@ -389,3 +389,12 @@ def test_pdf_report_replaces_non_ascii_project_text_without_corrupting_pdf():
     assert content.startswith(b"%PDF-1.4")
     assert b"Project: Caf? Pharmacy ? Delhi" in content
     assert b"startxref" in content
+
+
+def test_itemized_cost_sheet_protects_formula_and_keeps_cost_inputs_editable():
+    workbook = workbook_for()
+    costs = workbook["Project Cost Breakdown"]
+
+    assert costs.protection.sheet is True
+    assert all(costs.cell(row, 2).protection.locked is False for row in range(3, 12))
+    assert costs["B12"].protection.locked is True
