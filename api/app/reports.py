@@ -117,6 +117,12 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     inputs.column_dimensions["A"].width = 34
     inputs.column_dimensions["B"].width = 24
     inputs.freeze_panes = "A2"
+    # Protect calculated funding cells while leaving all intended assumptions editable.
+    for cell_ref in ("B2", "B3", "B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13", "B14", "B15"):
+        input_protection = copy(inputs[cell_ref].protection)
+        input_protection.locked = False
+        inputs[cell_ref].protection = input_protection
+    inputs.protection.sheet = True
 
     # Editable cost-planning worksheet. Select "Itemized costs" in Model Inputs
     # to use this total in the project funding and forecast calculations; the
