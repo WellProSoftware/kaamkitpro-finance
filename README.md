@@ -28,7 +28,7 @@ Hospital, pharmacy, optical and retail expansion may need location-wise sales, c
 ## Excel workbook guide
 - **Executive Summary:** key funding and forecast indicators.
 - **Model Inputs:** editable assumptions. Yellow cells are intended inputs; the calculated project-cost cell is formula-driven.
-- **Project Cost Breakdown:** editable categories. Initial outsourcing estimate is INR 1,500,000 and warehouse setup estimate is INR 2,000,000; these are planning estimates, not verified quotations.
+- **Project Cost Breakdown:** editable categories. All cost categories start at zero. Enter project-specific estimates; no sample project values are preloaded.
 - **Assumptions:** formula-driven annual forecast and debt schedule.
 - **Read Me:** workbook usage and limitations.
 
