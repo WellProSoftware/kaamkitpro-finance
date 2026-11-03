@@ -394,6 +394,9 @@ def test_itemized_cost_selection_recalculates_project_cost_debt_and_equity(tmp_p
     }))
 
     editable = load_workbook(source, data_only=False)
+    # Populate editable cost inputs explicitly; templates must not prefill sample business values.
+    editable["Project Cost Breakdown"]["B3"] = 1_500_000
+    editable["Project Cost Breakdown"]["B4"] = 2_000_000
     editable["Model Inputs"]["B14"] = "Itemized costs"
     edited_source = tmp_path / "itemized-costs-selected.xlsx"
     editable.save(edited_source)
