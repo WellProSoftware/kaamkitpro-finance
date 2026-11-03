@@ -141,10 +141,19 @@ export default function Home() {
       const openingDebt = Math.max(0, debt - (year - 1) * debt / Math.max(1, inputs.loanYears));
       const interest = year <= inputs.loanYears ? openingDebt * inputs.interestPct / 100 : 0;
       const debtService = principal + interest;
-      return { year, revenue, variableCost, fixedCost, ebitda, interest, principal, debtService,
-        dscr: debtService > 0 ? ebitda / debtService : null,
-        breakEven: variableRate < 1 ? fixedCost / (1 - variableRate) : null,
-        cash: ebitda - debtService };
+      return {
+        year,
+        revenue: Math.round(revenue * 100) / 100,
+        variableCost: Math.round(variableCost * 100) / 100,
+        fixedCost: Math.round(fixedCost * 100) / 100,
+        ebitda: Math.round(ebitda * 100) / 100,
+        interest: Math.round(interest * 100) / 100,
+        principal: Math.round(principal * 100) / 100,
+        debtService: Math.round(debtService * 100) / 100,
+        dscr: debtService > 0 ? Math.round((ebitda / debtService) * 100) / 100 : null,
+        breakEven: variableRate < 1 ? Math.round((fixedCost / (1 - variableRate)) * 100) / 100 : null,
+        cash: Math.round((ebitda - debtService) * 100) / 100,
+      };
     });
     return { debt, equity, rows };
   }, [inputs, effectiveProjectCost]);
