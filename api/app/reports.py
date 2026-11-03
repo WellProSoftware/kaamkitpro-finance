@@ -39,15 +39,15 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     first = annual[0] if annual else {}
     project_cost = projection.get("project_cost", 0) or 0
     debt = projection.get("debt", 0) or 0
-    debt_pct = model.get("debt_pct", (debt / project_cost * 100 if project_cost else 50))
+    debt_pct = model.get("debt_pct", (debt / project_cost * 100 if project_cost else 0))
     monthly_revenue = model.get("monthly_revenue", (first.get("revenue", 0) or 0) / 12)
-    growth_pct = model.get("growth_pct", 5)
-    variable_pct = model.get("variable_cost_pct", ((first.get("variable_cost", 0) or 0) / first.get("revenue", 1) * 100 if first.get("revenue") else 45))
+    growth_pct = model.get("growth_pct", 0)
+    variable_pct = model.get("variable_cost_pct", ((first.get("variable_cost", 0) or 0) / first.get("revenue", 1) * 100 if first.get("revenue") else 0))
     monthly_fixed = model.get("monthly_fixed_cost", (first.get("fixed_cost", 0) or 0) / 12)
-    interest_pct = model.get("interest_pct", ((first.get("interest", 0) or 0) / (first.get("opening_debt", 1) or 1) * 100 if first.get("opening_debt") else 11))
+    interest_pct = model.get("interest_pct", ((first.get("interest", 0) or 0) / (first.get("opening_debt", 1) or 1) * 100 if first.get("opening_debt") else 0))
     # Keep legacy fallbacks inside the same bounds as the editable input validations.
-    loan_years = model.get("loan_years", min(30, max(1, len(annual) or 7)))
-    years = model.get("projection_years", min(100, max(1, len(annual) or 5)))
+    loan_years = model.get("loan_years", min(30, max(1, len(annual) or 1)))
+    years = model.get("projection_years", min(100, max(1, len(annual) or 1)))
 
     inputs.append(["KAAMKITPRO FINANCE | EDITABLE MODEL INPUTS"])
     inputs.append(["Project name", name])
@@ -130,9 +130,9 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     costs.append(["KAAMKITPRO FINANCE | PROJECT COST BREAKDOWN"])
     costs.append(["Cost category", "Estimated cost (INR)", "Basis / note"])
     cost_rows = [
-        ("Outsourcing", 1_500_000, "User-provided starting estimate"),
-        ("Warehouse setup", 2_000_000, "User-provided minimum estimate"),
-        ("Hospital setup / expansion", 0, "Enter estimate; zero means not yet specified"),
+        ("Outsourcing / external services", 0, "Enter your project-specific estimate"),
+        ("Premises / warehouse setup", 0, "Enter your project-specific estimate"),
+        ("Hospital setup / expansion", 0, "Enter your project-specific estimate"),
         ("Retail / pharmacy setup or expansion", 0, "Enter estimate; zero means not yet specified"),
         ("Optical setup or expansion", 0, "Enter estimate; zero means not yet specified"),
         ("Equipment and technology", 0, "Enter estimate; zero means not yet specified"),
