@@ -28,14 +28,14 @@ def build_projection(data: dict) -> dict:
     """Build a simplified annual financial projection in INR."""
 
     project_cost = _number(data, "project_cost", 0)
-    debt_pct = _number(data, "debt_pct", 50)
+    debt_pct = _number(data, "debt_pct", 0)
     monthly_revenue = _number(data, "monthly_revenue", 0)
-    growth_pct = _number(data, "growth_pct", 5)
-    variable_cost_pct = _number(data, "variable_cost_pct", 45)
+    growth_pct = _number(data, "growth_pct", 0)
+    variable_cost_pct = _number(data, "variable_cost_pct", 0)
     monthly_fixed_cost = _number(data, "monthly_fixed_cost", 0)
-    interest_pct = _number(data, "interest_pct", 11)
-    loan_years = _integer(data, "loan_years", 7)
-    years = _integer(data, "projection_years", 5)
+    interest_pct = _number(data, "interest_pct", 0)
+    loan_years = _integer(data, "loan_years", 1)
+    years = _integer(data, "projection_years", 1)
 
     if project_cost < 0 or monthly_revenue < 0 or monthly_fixed_cost < 0:
         raise ValueError("Project cost, monthly revenue, and fixed costs cannot be negative")
