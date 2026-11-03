@@ -2,7 +2,10 @@ from math import isfinite
 
 
 def _number(data: dict, key: str, default: float) -> float:
-    value = float(data.get(key, default))
+    try:
+        value = float(data.get(key, default))
+    except (TypeError, ValueError):
+        raise ValueError(f"{key} must be a finite number") from None
     if not isfinite(value):
         raise ValueError(f"{key} must be a finite number")
     return value
