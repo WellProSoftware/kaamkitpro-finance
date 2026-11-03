@@ -524,3 +524,18 @@ def test_pdf_report_handles_projection_rows_with_missing_optional_fields():
     assert content.startswith(b"%PDF-1.4")
     assert b"Minimal Project" in content
     assert b"1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | - | 0 | 0 | -" in content
+
+
+
+def test_pdf_report_wraps_extremely_long_project_names_without_losing_text():
+    """A long unbroken project name must wrap instead of overflowing the page."""
+    projection = sample_projection()
+    project_name = "X" * 250
+    projection["project_name"] = project_name
+
+    content = build_pdf_report(projection)
+
+    assert content.startswith(b"%PDF-1.4")
+    assert b"X" * 112 in content
+    assert b"X" * 26 in content
+    assert content.count(b"/Type /Page /Parent") == 1
