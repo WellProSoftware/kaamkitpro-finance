@@ -16,13 +16,13 @@ type Inputs = {
   projectionYears: number;
 };
 
-type CostKey = "Outsourcing" | "Warehouse setup" | "Hospital setup / expansion" | "Retail / pharmacy setup or expansion" | "Optical setup or expansion" | "Equipment and technology" | "Licences, deposits and professional fees" | "Initial inventory and working capital" | "Other project costs";
+type CostKey = "Outsourcing / external services" | "Premises / warehouse setup" | "Hospital setup / expansion" | "Retail / pharmacy setup or expansion" | "Optical setup or expansion" | "Equipment and technology" | "Licences, deposits and professional fees" | "Initial inventory and working capital" | "Other project costs";
 type ItemizedCosts = Record<CostKey, number>;
 const MAX_PROJECT_COST = 1_000_000_000_000_000;
-const costLabels: CostKey[] = ["Outsourcing", "Warehouse setup", "Hospital setup / expansion", "Retail / pharmacy setup or expansion", "Optical setup or expansion", "Equipment and technology", "Licences, deposits and professional fees", "Initial inventory and working capital", "Other project costs"];
+const costLabels: CostKey[] = ["Outsourcing / external services", "Premises / warehouse setup", "Hospital setup / expansion", "Retail / pharmacy setup or expansion", "Optical setup or expansion", "Equipment and technology", "Licences, deposits and professional fees", "Initial inventory and working capital", "Other project costs"];
 const initialCosts: ItemizedCosts = {
-  "Outsourcing": 1500000,
-  "Warehouse setup": 2000000,
+  "Outsourcing / external services": 0,
+  "Premises / warehouse setup": 0,
   "Hospital setup / expansion": 0,
   "Retail / pharmacy setup or expansion": 0,
   "Optical setup or expansion": 0,
@@ -34,16 +34,16 @@ const initialCosts: ItemizedCosts = {
 
 const initial: Inputs = {
   projectName: "New Project",
-  projectType: "Hospital",
-  projectCost: 50000000,
-  debtPct: 60,
-  monthlyRevenue: 8000000,
-  growthPct: 8,
-  variableCostPct: 48,
-  monthlyFixedCost: 2200000,
-  interestPct: 11,
-  loanYears: 7,
-  projectionYears: 5,
+  projectType: "Other",
+  projectCost: 0,
+  debtPct: 0,
+  monthlyRevenue: 0,
+  growthPct: 0,
+  variableCostPct: 0,
+  monthlyFixedCost: 0,
+  interestPct: 0,
+  loanYears: 1,
+  projectionYears: 1,
 };
 
 const money = (value: number) => new Intl.NumberFormat("en-IN", {
