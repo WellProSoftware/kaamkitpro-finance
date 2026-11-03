@@ -52,6 +52,8 @@ import pytest
 
 @pytest.mark.parametrize("key,value", [
     ("project_cost", float("nan")),
+    ("project_cost", None),
+    ("monthly_revenue", "not-a-number"),
     ("monthly_revenue", float("inf")),
     ("monthly_fixed_cost", -1),
     ("debt_pct", 101),
