@@ -45,6 +45,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     variable_pct = model.get("variable_cost_pct", ((first.get("variable_cost", 0) or 0) / first.get("revenue", 1) * 100 if first.get("revenue") else 0))
     monthly_fixed = model.get("monthly_fixed_cost", (first.get("fixed_cost", 0) or 0) / 12)
     interest_pct = model.get("interest_pct", ((first.get("interest", 0) or 0) / (first.get("opening_debt", 1) or 1) * 100 if first.get("opening_debt") else 0))
+    fixed_cost_inflation_pct = model.get("fixed_cost_inflation_pct", 0)
     # Keep legacy fallbacks inside the same bounds as the editable input validations.
     loan_years = model.get("loan_years", min(30, max(1, len(annual) or 1)))
     years = model.get("projection_years", min(100, max(1, len(annual) or 1)))
@@ -70,14 +71,15 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     inputs.append(["Project cost basis", "Itemized costs" if itemized_costs is not None else "Aggregate input"])
     inputs.append(["Aggregate project cost", project_cost])
     inputs.append(["Itemized project costs total", "='Project Cost Breakdown'!B12"])
+    inputs.append(["Annual fixed-cost inflation (%)", fixed_cost_inflation_pct])
     inputs["B5"].number_format = '"INR " #,##0.00'
     inputs["B15"].number_format = '"INR " #,##0.00'
     inputs["B16"].number_format = '"INR " #,##0.00'
-    for cell in ("B6", "B8", "B9", "B11"):
+    for cell in ("B6", "B8", "B9", "B11", "B17"):
         inputs[cell].number_format = "0.00"
     for cell in ("B7", "B10"):
         inputs[cell].number_format = '"INR " #,##0.00'
-    for cell in ("B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13", "B14", "B15"):
+    for cell in ("B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13", "B14", "B15", "B17"):
         inputs[cell].fill = PatternFill("solid", fgColor="FFF2CC")
     # Guide spreadsheet users to valid assumptions before formulas recalculate.
     from openpyxl.worksheet.datavalidation import DataValidation
@@ -87,6 +89,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
         ("decimal", "between", "-100", "500", "B8", "Annual revenue growth must be between -100% and 500%."),
         ("decimal", "between", "0", "100", "B9", "Variable cost must be between 0% and 100%."),
         ("decimal", "between", "0", "100", "B11", "Annual interest rate must be between 0% and 100%."),
+        ("decimal", "between", "0", "100", "B17", "Annual fixed-cost inflation must be between 0% and 100%."),
         ("decimal", "between", "0", "1000000000000000", "B15", "Aggregate project cost must be between INR 0 and INR 1,000,000,000,000,000."),
         ("decimal", "greaterThanOrEqual", "0", None, "B7", "Monthly revenue cannot be negative."),
         ("decimal", "greaterThanOrEqual", "0", None, "B10", "Monthly fixed cost cannot be negative."),
@@ -200,7 +203,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
         assumptions.cell(r, 2, f'=IF(A{r}="","",MAX(0,$B$6-(A{r}-1)*$B$6/\'Model Inputs\'!$B$12))')
         assumptions.cell(r, 3, f'=IF(A{r}="","",\'Model Inputs\'!$B$7*12*(1+\'Model Inputs\'!$B$8/100)^(A{r}-1))')
         assumptions.cell(r, 4, f'=IF(A{r}="","",C{r}*\'Model Inputs\'!$B$9/100)')
-        assumptions.cell(r, 5, f'=IF(A{r}="","",\'Model Inputs\'!$B$10*12)')
+        assumptions.cell(r, 5, f'=IF(A{r}="","",\'Model Inputs\'!$B$10*12*(1+\'Model Inputs\'!$B$17/100)^(A{r}-1))')
         assumptions.cell(r, 6, f'=IF(A{r}="","",C{r}-D{r}-E{r})')
         assumptions.cell(r, 7, f'=IF(A{r}="","",IF(A{r}<=\'Model Inputs\'!$B$12,B{r}*\'Model Inputs\'!$B$11/100,0))')
         assumptions.cell(r, 8, f'=IF(A{r}="","",IF(A{r}<=\'Model Inputs\'!$B$12,MIN(B{r},$B$6/\'Model Inputs\'!$B$12),0))')
