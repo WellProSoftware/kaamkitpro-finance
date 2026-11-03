@@ -204,8 +204,8 @@ def test_itemized_costs_drive_projection_and_both_reports():
     costs = workbook["Project Cost Breakdown"]
     assert inputs["B14"].value == "Itemized costs"
     assert inputs["B5"].value == '=IF(B14="Itemized costs",B16,B15)'
-    assert costs["B3"].value == 0
-    assert costs["B4"].value == 0
+    assert costs["B3"].value == 1_500_000
+    assert costs["B4"].value == 2_000_000
     assert costs["B5"].value == 500_000
     assert costs["B12"].value == "=SUM(B3:B11)"
     assert b"Project cost: INR 4,000,000" in pdf.content
