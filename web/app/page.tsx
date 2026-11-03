@@ -12,6 +12,7 @@ type Inputs = {
   variableCostPct: number;
   monthlyFixedCost: number;
   interestPct: number;
+  fixedCostInflationPct: number;
   loanYears: number;
   projectionYears: number;
 };
@@ -42,6 +43,7 @@ const initial: Inputs = {
   variableCostPct: 0,
   monthlyFixedCost: 0,
   interestPct: 0,
+  fixedCostInflationPct: 0,
   loanYears: 1,
   projectionYears: 1,
 };
@@ -78,6 +80,7 @@ export default function Home() {
             validNumber(draft.variableCostPct) && draft.variableCostPct >= 0 && draft.variableCostPct <= 100 &&
             validNumber(draft.monthlyFixedCost) && draft.monthlyFixedCost >= 0 && draft.monthlyFixedCost <= MAX_PROJECT_COST &&
             validNumber(draft.interestPct) && draft.interestPct >= 0 && draft.interestPct <= 100 &&
+            validNumber(draft.fixedCostInflationPct ?? 0) && (draft.fixedCostInflationPct ?? 0) >= 0 && (draft.fixedCostInflationPct ?? 0) <= 100 &&
             validNumber(draft.loanYears) && Number.isInteger(draft.loanYears) && draft.loanYears >= 1 && draft.loanYears <= 30 &&
             validNumber(draft.projectionYears) && Number.isInteger(draft.projectionYears) && draft.projectionYears >= 1 && draft.projectionYears <= 100
           ) {
@@ -103,7 +106,7 @@ export default function Home() {
   }, []);
 
   const update = (key: keyof Inputs, value: string) => {
-    const numeric = ["projectCost","debtPct","monthlyRevenue","growthPct","variableCostPct","monthlyFixedCost","interestPct","loanYears","projectionYears"].includes(key);
+    const numeric = ["projectCost","debtPct","monthlyRevenue","growthPct","variableCostPct","monthlyFixedCost","interestPct","fixedCostInflationPct","loanYears","projectionYears"].includes(key);
     setInputs((prev) => ({ ...prev, [key]: numeric ? Number(value) : value }));
     setSaved(false);
   };
@@ -116,6 +119,7 @@ export default function Home() {
   if (!Number.isFinite(inputs.variableCostPct) || inputs.variableCostPct < 0 || inputs.variableCostPct > 100) inputErrors.push('Variable costs must be between 0% and 100%.');
   if (!Number.isFinite(inputs.monthlyFixedCost) || inputs.monthlyFixedCost < 0 || inputs.monthlyFixedCost > MAX_PROJECT_COST) inputErrors.push('Monthly fixed costs must be a valid non-negative amount.');
   if (!Number.isFinite(inputs.interestPct) || inputs.interestPct < 0 || inputs.interestPct > 100) inputErrors.push('Annual interest rate must be between 0% and 100%.');
+  if (!Number.isFinite(inputs.fixedCostInflationPct) || inputs.fixedCostInflationPct < 0 || inputs.fixedCostInflationPct > 100) inputErrors.push('Annual fixed-cost inflation must be between 0% and 100%.');
   if (!Number.isInteger(inputs.loanYears) || inputs.loanYears < 1 || inputs.loanYears > 30) inputErrors.push('Loan tenure must be a whole number from 1 to 30 years.');
   if (!Number.isInteger(inputs.projectionYears) || inputs.projectionYears < 1 || inputs.projectionYears > 100) inputErrors.push('Projection period must be a whole number from 1 to 100 years.');
   const inputError = inputErrors[0] ?? '';
@@ -135,7 +139,7 @@ export default function Home() {
       const year = i + 1;
       const revenue = inputs.monthlyRevenue * 12 * Math.pow(1 + inputs.growthPct / 100, i);
       const variableCost = revenue * variableRate;
-      const fixedCost = inputs.monthlyFixedCost * 12;
+      const fixedCost = inputs.monthlyFixedCost * 12 * Math.pow(1 + inputs.fixedCostInflationPct / 100, i);
       const ebitda = revenue - variableCost - fixedCost;
       const principal = year <= inputs.loanYears ? debt / Math.max(1, inputs.loanYears) : 0;
       const openingDebt = Math.max(0, debt - (year - 1) * debt / Math.max(1, inputs.loanYears));
@@ -195,6 +199,7 @@ export default function Home() {
       variable_cost_pct: inputs.variableCostPct,
       monthly_fixed_cost: inputs.monthlyFixedCost,
       interest_pct: inputs.interestPct,
+      fixed_cost_inflation_pct: inputs.fixedCostInflationPct,
       loan_years: inputs.loanYears,
       projection_years: inputs.projectionYears,
     };
@@ -276,6 +281,7 @@ export default function Home() {
             <div className="field"><label htmlFor="variableCostPct">Variable costs (%)</label><input id="variableCostPct" type="number" min="0" max="100" value={inputs.variableCostPct} onChange={(e) => update("variableCostPct", e.target.value)}/></div>
             <div className="field"><label htmlFor="monthlyFixedCost">Monthly fixed costs (₹)</label><div className="input-wrap"><span>₹</span><input id="monthlyFixedCost" type="number" min="0" value={inputs.monthlyFixedCost} onChange={(e) => update("monthlyFixedCost", e.target.value)}/></div></div>
             <div className="field"><label htmlFor="interestPct">Annual interest rate (%)</label><input id="interestPct" type="number" min="0" max="100" value={inputs.interestPct} onChange={(e) => update("interestPct", e.target.value)}/></div>
+            <div className="field"><label htmlFor="fixedCostInflationPct">Annual fixed-cost inflation (%)</label><input id="fixedCostInflationPct" type="number" min="0" max="100" value={inputs.fixedCostInflationPct} onChange={(e) => update("fixedCostInflationPct", e.target.value)}/></div>
             <div className="field"><label htmlFor="loanYears">Loan tenure (years)</label><input id="loanYears" type="number" min="1" max="30" value={inputs.loanYears} onChange={(e) => update("loanYears", e.target.value)}/></div>
             <div className="field"><label htmlFor="projectionYears">Projection period (years, up to 100)</label><input id="projectionYears" type="number" min="1" max="100" step="1" value={inputs.projectionYears} onChange={(e) => update("projectionYears", e.target.value)}/></div>
           </div>
@@ -297,7 +303,7 @@ export default function Home() {
               <strong>Model methodology &amp; limitations</strong>
               <ul style={{margin:"8px 0 0",paddingLeft:20}}>
                 <li>Year 1 revenue is monthly revenue × 12; later years compound the annual growth assumption.</li>
-                <li>Variable costs move with revenue. Monthly fixed costs are annualised and held flat; inflation is not modelled.</li>
+                <li>Variable costs move with revenue. Monthly fixed costs are annualised and increased by the annual fixed-cost inflation assumption.</li>
                 <li>Debt is repaid using equal annual principal during the loan tenure. Interest is calculated on each year's opening loan balance; this is not a monthly EMI schedule.</li>
                 <li>EBITDA is before interest, depreciation and tax. DSCR compares EBITDA with scheduled principal plus interest.</li>
                 <li>The model does not yet forecast tax, depreciation, capex, working capital movements, inventory, monthly seasonality, or sector-specific operating drivers.</li>
