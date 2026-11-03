@@ -121,3 +121,22 @@ def test_revenue_growth_compounds_from_prior_year():
     assert [row["revenue"] for row in rows] == [
         18_000_000, 19_800_000, 21_780_000, 23_958_000
     ]
+
+
+def test_public_debt_schedule_matches_projection_and_stops_after_payoff():
+    data = sample()
+    data["loan_years"] = 3
+    data["projection_years"] = 6
+    result = build_projection(data)
+
+    assert len(result["debt_schedule"]) == 6
+    for schedule_row, projection_row in zip(result["debt_schedule"], result["annual_projection"]):
+        assert schedule_row["year"] == projection_row["year"]
+        assert schedule_row["opening_balance"] == projection_row["opening_debt"]
+        assert schedule_row["principal_repayment"] == projection_row["principal"]
+        assert schedule_row["interest_payment"] == projection_row["interest"]
+        assert schedule_row["total_debt_service"] == projection_row["debt_service"]
+        assert schedule_row["closing_balance"] == projection_row["closing_debt"]
+
+    assert all(row["closing_balance"] == 0 for row in result["debt_schedule"][2:])
+    assert all(row["total_debt_service"] == 0 for row in result["debt_schedule"][3:])
