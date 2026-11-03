@@ -130,8 +130,8 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     costs.append(["KAAMKITPRO FINANCE | PROJECT COST BREAKDOWN"])
     costs.append(["Cost category", "Estimated cost (INR)", "Basis / note"])
     cost_rows = [
-        ("Outsourcing / external services", 0, "Enter your project-specific estimate"),
-        ("Premises / warehouse setup", 0, "Enter your project-specific estimate"),
+        ("Outsourcing", 0, "Enter your project-specific estimate"),
+        ("Warehouse setup", 0, "Enter your project-specific estimate"),
         ("Hospital setup / expansion", 0, "Enter your project-specific estimate"),
         ("Retail / pharmacy setup or expansion", 0, "Enter estimate; zero means not yet specified"),
         ("Optical setup or expansion", 0, "Enter estimate; zero means not yet specified"),
