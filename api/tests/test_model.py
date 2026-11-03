@@ -170,3 +170,18 @@ def test_negative_ebitda_produces_negative_dscr_when_debt_service_exists():
     assert row["ebitda"] < 0
     assert row["debt_service"] > 0
     assert row["dscr"] < 0
+
+
+def test_fixed_cost_inflation_compounds_annually():
+    data = sample()
+    data.update({"projection_years": 3, "fixed_cost_inflation_pct": 10})
+    rows = build_projection(data)["annual_projection"]
+    assert [row["fixed_cost"] for row in rows] == [3_600_000, 3_960_000, 4_356_000]
+    assert [row["ebitda"] for row in rows] == [7_200_000, 6_840_000, 6_444_000]
+
+
+def test_fixed_cost_inflation_defaults_to_zero():
+    data = sample()
+    data["projection_years"] = 3
+    rows = build_projection(data)["annual_projection"]
+    assert [row["fixed_cost"] for row in rows] == [3_600_000] * 3
