@@ -34,6 +34,7 @@ def build_projection(data: dict) -> dict:
     variable_cost_pct = _number(data, "variable_cost_pct", 0)
     monthly_fixed_cost = _number(data, "monthly_fixed_cost", 0)
     interest_pct = _number(data, "interest_pct", 0)
+    fixed_cost_inflation_pct = _number(data, "fixed_cost_inflation_pct", 0)
     loan_years = _integer(data, "loan_years", 1)
     years = _integer(data, "projection_years", 1)
 
@@ -47,6 +48,8 @@ def build_projection(data: dict) -> dict:
         raise ValueError("variable_cost_pct must be between 0 and 100")
     if not 0 <= interest_pct <= 100:
         raise ValueError("interest_pct must be between 0 and 100")
+    if not 0 <= fixed_cost_inflation_pct <= 100:
+        raise ValueError("fixed_cost_inflation_pct must be between 0 and 100")
     if not 1 <= loan_years <= 30:
         raise ValueError("loan_years must be between 1 and 30")
     if not 1 <= years <= 100:
@@ -60,11 +63,15 @@ def build_projection(data: dict) -> dict:
     variable_rate = variable_cost_pct / 100
     fixed_cost = monthly_fixed_cost * 12
     interest_rate = interest_pct / 100
+    fixed_cost_inflation = fixed_cost_inflation_pct / 100
     results = []
 
     for year in range(1, years + 1):
         if year > 1:
             revenue *= 1 + growth
+
+        if year > 1:
+            fixed_cost *= 1 + fixed_cost_inflation
 
         variable_cost = revenue * variable_rate
         ebitda = revenue - variable_cost - fixed_cost
@@ -100,6 +107,7 @@ def build_projection(data: dict) -> dict:
             "variable_cost_pct": variable_cost_pct,
             "monthly_fixed_cost": monthly_fixed_cost,
             "interest_pct": interest_pct,
+            "fixed_cost_inflation_pct": fixed_cost_inflation_pct,
             "loan_years": loan_years,
             "projection_years": years,
         },
