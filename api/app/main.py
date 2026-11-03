@@ -39,6 +39,7 @@ class ProjectionInput(BaseModel):
     variable_cost_pct: float = Field(default=0, ge=0, le=100)
     monthly_fixed_cost: float = Field(default=0, ge=0, le=1_000_000_000_000_000)
     interest_pct: float = Field(default=0, ge=0, le=100)
+    fixed_cost_inflation_pct: float = Field(default=0, ge=0, le=100)
     loan_years: int = Field(default=1, ge=1, le=30)
     projection_years: int = Field(default=1, ge=1, le=100)
     itemized_costs: dict[str, float] | None = None
