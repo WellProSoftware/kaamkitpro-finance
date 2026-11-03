@@ -23,6 +23,7 @@ def sample_projection():
             "variable_cost_pct": 44.444444,
             "monthly_fixed_cost": 16_666.6667,
             "interest_pct": 11,
+            "fixed_cost_inflation_pct": 5,
             "loan_years": 5,
             "projection_years": 5,
         },
@@ -73,6 +74,10 @@ def test_excel_model_inputs_drive_projection_and_summary_formulas():
     assert "'Model Inputs'!$B$8" in assumptions["C10"].value
     assert "'Model Inputs'!$B$9" in assumptions["D10"].value
     assert "'Model Inputs'!$B$10" in assumptions["E10"].value
+    assert "'Model Inputs'!$B$17" in assumptions["E10"].value
+    assert assumptions["E10"].value.endswith("^(A10-1))")
+    assert assumptions["E11"].value.endswith("^(A11-1))")
+    assert inputs["B17"].value == 5
     assert "'Model Inputs'!$B$11" in assumptions["G10"].value
     assert "'Model Inputs'!$B$12" in assumptions["H10"].value
     assert assumptions["C11"].value.endswith("^(A11-1))")
@@ -105,7 +110,7 @@ def test_excel_model_inputs_have_range_validation_and_clear_errors():
     workbook = workbook_for()
     inputs = workbook["Model Inputs"]
     expected_cells = (
-        "B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13", "B15"
+        "B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13", "B15", "B17"
     )
     validations = {
         cell: next(
@@ -124,6 +129,7 @@ def test_excel_model_inputs_have_range_validation_and_clear_errors():
         "B9": ("decimal", "between", "0"),
         "B10": ("decimal", "greaterThanOrEqual", "0"),
         "B11": ("decimal", "between", "0"),
+        "B17": ("decimal", "between", "0"),
         "B12": ("whole", "between", "1"),
         "B13": ("whole", "between", "1"),
     }
@@ -141,6 +147,7 @@ def test_excel_model_inputs_have_range_validation_and_clear_errors():
     assert validations["B8"].formula2 == "500"
     assert validations["B9"].formula2 == "100"
     assert validations["B11"].formula2 == "100"
+    assert validations["B17"].formula2 == "100"
     assert validations["B12"].formula2 == "30"
     assert validations["B13"].formula2 == "100"
 
