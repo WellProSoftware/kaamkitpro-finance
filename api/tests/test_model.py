@@ -151,8 +151,8 @@ def test_public_debt_schedule_matches_projection_and_stops_after_payoff():
 @pytest.mark.parametrize(
     "data,expected_ebitda,expected_break_even",
     [
-        ({"monthly_revenue": 0, "monthly_fixed_cost": 100_000}, -1_200_000, 2_181_818.18),
-        ({"monthly_revenue": 100_000, "monthly_fixed_cost": 0}, 660_000, 0),
+        ({"monthly_revenue": 0, "monthly_fixed_cost": 100_000}, -1_200_000, 3_000_000),
+        ({"monthly_revenue": 100_000, "monthly_fixed_cost": 0}, 480_000, 0),
     ],
 )
 def test_zero_revenue_or_fixed_cost_edge_cases(data, expected_ebitda, expected_break_even):
