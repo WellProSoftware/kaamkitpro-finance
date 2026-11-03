@@ -479,3 +479,12 @@ def test_itemized_cost_inputs_enforce_per_item_and_aggregate_limits():
     assert aggregate.formula1 == "=SUM($B$3:$B$11)<=1000000000000000"
     assert aggregate.showErrorMessage is True
     assert aggregate.errorTitle == "Project cost limit exceeded"
+
+
+def test_read_me_explains_worksheet_protection():
+    workbook = workbook_for()
+    read_me = workbook["Read Me"]
+    notes = [str(cell.value) for row in read_me.iter_rows() for cell in row if cell.value is not None]
+
+    assert any("protected against accidental edits" in note for note in notes)
+    assert any("not password security" in note for note in notes)
