@@ -8,6 +8,19 @@ def _number(data: dict, key: str, default: float) -> float:
     return value
 
 
+def _integer(data: dict, key: str, default: int) -> int:
+    raw_value = data.get(key, default)
+    if isinstance(raw_value, bool):
+        raise ValueError(f"{key} must be a whole number")
+    try:
+        numeric_value = float(raw_value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{key} must be a whole number") from None
+    if not isfinite(numeric_value) or not numeric_value.is_integer():
+        raise ValueError(f"{key} must be a whole number")
+    return int(numeric_value)
+
+
 def build_projection(data: dict) -> dict:
     """Build a simplified annual financial projection in INR."""
 
@@ -18,8 +31,8 @@ def build_projection(data: dict) -> dict:
     variable_cost_pct = _number(data, "variable_cost_pct", 45)
     monthly_fixed_cost = _number(data, "monthly_fixed_cost", 0)
     interest_pct = _number(data, "interest_pct", 11)
-    loan_years = int(data.get("loan_years", 7))
-    years = int(data.get("projection_years", 5))
+    loan_years = _integer(data, "loan_years", 7)
+    years = _integer(data, "projection_years", 5)
 
     if project_cost < 0 or monthly_revenue < 0 or monthly_fixed_cost < 0:
         raise ValueError("Project cost, monthly revenue, and fixed costs cannot be negative")
