@@ -294,8 +294,8 @@ def test_excel_project_cost_breakdown_has_editable_costs_and_formula_total():
     workbook = workbook_for()
     costs = workbook["Project Cost Breakdown"]
 
-    assert costs["B3"].value == 1_500_000
-    assert costs["B4"].value == 2_000_000
+    assert costs["B3"].value == 0
+    assert costs["B4"].value == 0
     assert costs["B12"].value == "=SUM(B3:B11)"
     assert costs["B3"].fill.fgColor.rgb.endswith("FFF2CC")
     assert costs["B4"].fill.fgColor.rgb.endswith("FFF2CC")
