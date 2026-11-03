@@ -144,3 +144,27 @@ def test_public_debt_schedule_matches_projection_and_stops_after_payoff():
 
     assert all(row["closing_balance"] == 0 for row in result["debt_schedule"][2:])
     assert all(row["total_debt_service"] == 0 for row in result["debt_schedule"][3:])
+
+
+@pytest.mark.parametrize(
+    "data,expected_ebitda,expected_break_even",
+    [
+        ({"monthly_revenue": 0, "monthly_fixed_cost": 100_000}, -1_200_000, 2_181_818.18),
+        ({"monthly_revenue": 100_000, "monthly_fixed_cost": 0}, 660_000, 0),
+    ],
+)
+def test_zero_revenue_or_fixed_cost_edge_cases(data, expected_ebitda, expected_break_even):
+    inputs = sample()
+    inputs.update(data)
+    row = build_projection(inputs)["annual_projection"][0]
+    assert row["ebitda"] == expected_ebitda
+    assert row["break_even_revenue"] == expected_break_even
+
+
+def test_negative_ebitda_produces_negative_dscr_when_debt_service_exists():
+    inputs = sample()
+    inputs.update({"monthly_revenue": 0, "monthly_fixed_cost": 100_000})
+    row = build_projection(inputs)["annual_projection"][0]
+    assert row["ebitda"] < 0
+    assert row["debt_service"] > 0
+    assert row["dscr"] < 0
