@@ -488,3 +488,39 @@ def test_read_me_explains_worksheet_protection():
 
     assert any("protected against accidental edits" in note for note in notes)
     assert any("not password security" in note for note in notes)
+
+
+def test_reports_handle_empty_projection_payload():
+    """An empty payload should still produce valid downloadable report files."""
+    workbook_bytes = build_excel_report({})
+    workbook = load_workbook(BytesIO(workbook_bytes), data_only=False)
+
+    assert workbook.sheetnames == [
+        "Executive Summary",
+        "Assumptions",
+        "Model Inputs",
+        "Project Cost Breakdown",
+        "Read Me",
+    ]
+    assert workbook["Model Inputs"]["B2"].value == "New Project"
+    assert workbook["Model Inputs"]["B5"].value == '=IF(B14="Itemized costs",B16,B15)'
+    assert workbook["Assumptions"]["A10"].value.startswith("=IF(")
+
+    pdf_bytes = build_pdf_report({})
+    assert pdf_bytes.startswith(b"%PDF-1.4")
+    assert b"Project: New Project" in pdf_bytes
+    assert b"startxref" in pdf_bytes
+
+
+def test_pdf_report_handles_projection_rows_with_missing_optional_fields():
+    """Missing optional forecast metrics should use documented zero/dash fallbacks."""
+    projection = {
+        "project_name": "Minimal Project",
+        "annual_projection": [{"year": 1}],
+    }
+
+    content = build_pdf_report(projection)
+
+    assert content.startswith(b"%PDF-1.4")
+    assert b"Minimal Project" in content
+    assert b"1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | - | 0 | 0 | -" in content
