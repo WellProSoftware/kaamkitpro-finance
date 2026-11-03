@@ -59,6 +59,10 @@ import pytest
     ("interest_pct", 101),
     ("loan_years", 31),
     ("projection_years", 101),
+    ("loan_years", 2.5),
+    ("projection_years", 3.5),
+    ("loan_years", True),
+    ("projection_years", float("inf")),
 ])
 def test_rejects_invalid_model_assumptions(key, value):
     data = sample()
