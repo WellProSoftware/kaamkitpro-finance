@@ -257,7 +257,7 @@ export default function Home() {
 
       <section className="hero">
         <div><div className="eyebrow">Financial planning workspace</div><h1>Turn your project into a clear financial plan.</h1><p>Build a practical first-pass projection for a hospital, pharmacy, optical store, retail business, warehouse or manufacturing project.</p></div>
-        <div className="actions"><button className="secondary" onClick={saveAssumptions}>Save draft</button><button className="secondary" onClick={exportCsv} disabled={Boolean(itemizedCostsError)}>Export CSV</button><button className="secondary" onClick={() => void exportReport("excel")} disabled={exportsDisabled}>{exporting === "excel" ? "Preparing Excel…" : "Export Excel"}</button><button className="secondary" onClick={() => void exportReport("pdf")} disabled={exportsDisabled}>{exporting === "pdf" ? "Preparing PDF…" : "Export PDF"}</button></div>
+        <div className="actions"><button className="secondary" onClick={saveAssumptions}>Save draft</button><button className="secondary" onClick={exportCsv} disabled={exportsDisabled}>Export CSV</button><button className="secondary" onClick={() => void exportReport("excel")} disabled={exportsDisabled}>{exporting === "excel" ? "Preparing Excel…" : "Export Excel"}</button><button className="secondary" onClick={() => void exportReport("pdf")} disabled={exportsDisabled}>{exporting === "pdf" ? "Preparing PDF…" : "Export PDF"}</button></div>
       </section>
 
       <div className="grid">
