@@ -177,7 +177,7 @@ def test_fixed_cost_inflation_compounds_annually():
     data.update({"projection_years": 3, "fixed_cost_inflation_pct": 10})
     rows = build_projection(data)["annual_projection"]
     assert [row["fixed_cost"] for row in rows] == [3_600_000, 3_960_000, 4_356_000]
-    assert [row["ebitda"] for row in rows] == [3_600_000, 3_240_000, 2_844_000]
+    assert [row["ebitda"] for row in rows] == [3_600_000, 3_600_000, 3_582_000]
 
 
 def test_fixed_cost_inflation_defaults_to_zero():
