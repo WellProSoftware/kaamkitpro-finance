@@ -16,7 +16,7 @@ type Inputs = {
   projectionYears: number;
 };
 
-type CostKey = "Outsourcing / external services" | "Premises / warehouse setup" | "Hospital setup / expansion" | "Retail / pharmacy setup or expansion" | "Optical setup or expansion" | "Equipment and technology" | "Licences, deposits and professional fees" | "Initial inventory and working capital" | "Other project costs";
+type CostKey = "Outsourcing" | "Warehouse setup" | "Hospital setup / expansion" | "Retail / pharmacy setup or expansion" | "Optical setup or expansion" | "Equipment and technology" | "Licences, deposits and professional fees" | "Initial inventory and working capital" | "Other project costs";
 type ItemizedCosts = Record<CostKey, number>;
 const MAX_PROJECT_COST = 1_000_000_000_000_000;
 const costLabels: CostKey[] = ["Outsourcing / external services", "Premises / warehouse setup", "Hospital setup / expansion", "Retail / pharmacy setup or expansion", "Optical setup or expansion", "Equipment and technology", "Licences, deposits and professional fees", "Initial inventory and working capital", "Other project costs"];
