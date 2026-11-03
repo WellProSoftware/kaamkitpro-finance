@@ -21,8 +21,8 @@ type ItemizedCosts = Record<CostKey, number>;
 const MAX_PROJECT_COST = 1_000_000_000_000_000;
 const costLabels: CostKey[] = ["Outsourcing", "Warehouse setup", "Hospital setup / expansion", "Retail / pharmacy setup or expansion", "Optical setup or expansion", "Equipment and technology", "Licences, deposits and professional fees", "Initial inventory and working capital", "Other project costs"];
 const initialCosts: ItemizedCosts = {
-  "Outsourcing / external services": 0,
-  "Premises / warehouse setup": 0,
+  "Outsourcing": 0,
+  "Warehouse setup": 0,
   "Hospital setup / expansion": 0,
   "Retail / pharmacy setup or expansion": 0,
   "Optical setup or expansion": 0,
