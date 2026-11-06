@@ -15,6 +15,7 @@ type Inputs = {
   fixedCostInflationPct: number;
   loanYears: number;
   projectionYears: number;
+  repaymentMethod: "equal_annual_principal" | "monthly_emi";
 };
 
 type CostKey = "Outsourcing" | "Warehouse setup" | "Hospital setup / expansion" | "Retail / pharmacy setup or expansion" | "Optical setup or expansion" | "Equipment and technology" | "Licences, deposits and professional fees" | "Initial inventory and working capital" | "Other project costs";
@@ -46,6 +47,7 @@ const initial: Inputs = {
   fixedCostInflationPct: 0,
   loanYears: 1,
   projectionYears: 1,
+  repaymentMethod: "equal_annual_principal",
 };
 
 const money = (value: number) => new Intl.NumberFormat("en-IN", {
@@ -82,7 +84,8 @@ export default function Home() {
             validNumber(draft.interestPct) && draft.interestPct >= 0 && draft.interestPct <= 100 &&
             validNumber(draft.fixedCostInflationPct ?? 0) && (draft.fixedCostInflationPct ?? 0) >= 0 && (draft.fixedCostInflationPct ?? 0) <= 100 &&
             validNumber(draft.loanYears) && Number.isInteger(draft.loanYears) && draft.loanYears >= 1 && draft.loanYears <= 30 &&
-            validNumber(draft.projectionYears) && Number.isInteger(draft.projectionYears) && draft.projectionYears >= 1 && draft.projectionYears <= 100
+            validNumber(draft.projectionYears) && Number.isInteger(draft.projectionYears) && draft.projectionYears >= 1 && draft.projectionYears <= 100 &&
+            (draft.repaymentMethod === undefined || draft.repaymentMethod === "equal_annual_principal" || draft.repaymentMethod === "monthly_emi")
           ) {
             setInputs({ ...initial, ...draft });
             if (typeof draft.useItemizedCosts === "boolean") setUseItemizedCosts(draft.useItemizedCosts);
@@ -135,19 +138,41 @@ export default function Home() {
     const debt = effectiveProjectCost * inputs.debtPct / 100;
     const equity = effectiveProjectCost - debt;
     const variableRate = Math.min(100, Math.max(0, inputs.variableCostPct)) / 100;
+    const monthlyRate = inputs.interestPct / 1200;
+    const totalMonths = inputs.loanYears * 12;
+    const factor = Math.pow(1 + monthlyRate, totalMonths);
+    const emi = monthlyRate === 0 ? debt / totalMonths : debt * monthlyRate * factor / (factor - 1);
+    let balance = debt;
+    const monthlyDebtSchedule = inputs.repaymentMethod === "monthly_emi" && debt > 0
+      ? Array.from({ length: totalMonths }, (_, index) => {
+          const openingBalance = balance;
+          const interest = openingBalance * monthlyRate;
+          let principal = Math.min(openingBalance, Math.max(0, emi - interest));
+          if (index === totalMonths - 1) principal = openingBalance;
+          balance = Math.max(0, openingBalance - principal);
+          return { month: index + 1, year: Math.floor(index / 12) + 1, openingBalance, emi: principal + interest, principal, interest, closingBalance: balance };
+        })
+      : [];
     const rows = Array.from({ length: Math.max(1, Math.min(100, inputs.projectionYears || 1)) }, (_, i) => {
       const year = i + 1;
       const revenue = inputs.monthlyRevenue * 12 * Math.pow(1 + inputs.growthPct / 100, i);
       const variableCost = revenue * variableRate;
       const fixedCost = inputs.monthlyFixedCost * 12 * Math.pow(1 + inputs.fixedCostInflationPct / 100, i);
       const ebitda = revenue - variableCost - fixedCost;
-      const principal = year <= inputs.loanYears ? debt / Math.max(1, inputs.loanYears) : 0;
-      const openingDebt = Math.max(0, debt - (year - 1) * debt / Math.max(1, inputs.loanYears));
-      const interest = year <= inputs.loanYears ? openingDebt * inputs.interestPct / 100 : 0;
+      let openingDebt = 0, principal = 0, interest = 0;
+      if (inputs.repaymentMethod === "monthly_emi") {
+        const yearRows = monthlyDebtSchedule.filter((item) => item.year === year);
+        openingDebt = yearRows[0]?.openingBalance ?? 0;
+        principal = yearRows.reduce((sum, item) => sum + item.principal, 0);
+        interest = yearRows.reduce((sum, item) => sum + item.interest, 0);
+      } else {
+        openingDebt = Math.max(0, debt - (year - 1) * debt / Math.max(1, inputs.loanYears));
+        principal = year <= inputs.loanYears ? debt / Math.max(1, inputs.loanYears) : 0;
+        interest = year <= inputs.loanYears ? openingDebt * inputs.interestPct / 100 : 0;
+      }
       const debtService = principal + interest;
       return {
-        year,
-        revenue: Math.round(revenue * 100) / 100,
+        year, revenue: Math.round(revenue * 100) / 100,
         variableCost: Math.round(variableCost * 100) / 100,
         fixedCost: Math.round(fixedCost * 100) / 100,
         ebitda: Math.round(ebitda * 100) / 100,
@@ -159,7 +184,7 @@ export default function Home() {
         cash: Math.round((ebitda - debtService) * 100) / 100,
       };
     });
-    return { debt, equity, rows };
+    return { debt, equity, rows, monthlyDebtSchedule };
   }, [inputs, effectiveProjectCost]);
 
   const exportCsv = () => {
@@ -202,6 +227,7 @@ export default function Home() {
       fixed_cost_inflation_pct: inputs.fixedCostInflationPct,
       loan_years: inputs.loanYears,
       projection_years: inputs.projectionYears,
+      repayment_method: inputs.repaymentMethod,
     };
 
     try {
@@ -283,7 +309,7 @@ export default function Home() {
             <div className="field"><label htmlFor="interestPct">Annual interest rate (%)</label><input id="interestPct" type="number" min="0" max="100" value={inputs.interestPct} onChange={(e) => update("interestPct", e.target.value)}/></div>
             <div className="field"><label htmlFor="fixedCostInflationPct">Annual fixed-cost inflation (%)</label><input id="fixedCostInflationPct" type="number" min="0" max="100" value={inputs.fixedCostInflationPct} onChange={(e) => update("fixedCostInflationPct", e.target.value)}/></div>
             <div className="field"><label htmlFor="loanYears">Loan tenure (years)</label><input id="loanYears" type="number" min="1" max="30" value={inputs.loanYears} onChange={(e) => update("loanYears", e.target.value)}/></div>
-            <div className="field"><label htmlFor="projectionYears">Projection period (years, up to 100)</label><input id="projectionYears" type="number" min="1" max="100" step="1" value={inputs.projectionYears} onChange={(e) => update("projectionYears", e.target.value)}/></div>
+            <div className="field"><label htmlFor="projectionYears">Projection period (years, up to 100)</label><input id="projectionYears" type="number" min="1" max="100" step="1" value={inputs.projectionYears} onChange={(e) => update("projectionYears", e.target.value)}/></div><div className="field"><label htmlFor="repaymentMethod">Loan repayment method</label><select id="repaymentMethod" value={inputs.repaymentMethod} onChange={(e) => { setInputs((prev) => ({ ...prev, repaymentMethod: e.target.value as Inputs["repaymentMethod"] })); setSaved(false); }}><option value="equal_annual_principal">Equal annual principal</option><option value="monthly_emi">Monthly EMI (reducing balance)</option></select></div>
           </div>
           <button className="primary" onClick={saveAssumptions}>Save project draft on this device</button>
           {draftLoaded && saved && <p className="section-desc" role="status" style={{marginTop:10,marginBottom:0}}>Draft restored or saved in this browser only. Account sync is not connected yet.</p>}
@@ -319,7 +345,7 @@ export default function Home() {
             <p className="note">Scheme and bank terms can change. Final eligibility, margin, interest, collateral, subsidy, guarantee cover and sanction are decided by the implementing agency or lender. Re-check official circulars and the lender's Key Facts Statement on the application date.</p>
           </div>
           <div className="card" style={{marginBottom:16}}>
-            <h2 className="section-title">Annual financial projection</h2><p className="section-desc">Illustrative operating model · INR</p>
+            <h2 className="section-title">Annual financial projection</h2><p className="section-desc">Illustrative operating model · INR · {inputs.repaymentMethod === "monthly_emi" ? "Monthly reducing-balance EMI" : "Equal annual principal"}</p>
             <div className="table-wrap"><table><thead><tr><th>Year</th><th>Revenue</th><th>EBITDA</th><th>Debt service</th><th>DSCR</th><th>Cash after debt (pre-tax, pre-capex)</th></tr></thead><tbody>{model.rows.map(r=><tr key={r.year}><td>Year {r.year}</td><td>{money(r.revenue)}</td><td className={r.ebitda>=0?"positive":"negative"}>{money(r.ebitda)}</td><td>{money(r.debtService)}</td><td>{r.dscr===null?"—":r.dscr.toFixed(2)+"x"}</td><td className={r.cash>=0?"positive":"negative"}>{money(r.cash)}</td></tr>)}</tbody></table></div>
             <div className="note">DSCR = EBITDA ÷ scheduled principal and interest. Cash after debt service = EBITDA less interest and principal; it is pre-tax and pre-capex, not free cash flow.</div>
             <div className="note" style={{marginTop:12}}>
@@ -327,7 +353,7 @@ export default function Home() {
               <ul style={{margin:"8px 0 0",paddingLeft:20}}>
                 <li>Year 1 revenue is monthly revenue × 12; later years compound the annual growth assumption.</li>
                 <li>Variable costs move with revenue. Monthly fixed costs are annualised and increased by the annual fixed-cost inflation assumption.</li>
-                <li>Debt is repaid using equal annual principal during the loan tenure. Interest is calculated on each year's opening loan balance; this is not a monthly EMI schedule.</li>
+                <li>{inputs.repaymentMethod === "monthly_emi" ? "Debt uses reducing-balance monthly EMI; annual totals aggregate monthly principal and interest." : "Debt is repaid using equal annual principal; interest is calculated on each year's opening loan balance."}</li>
                 <li>EBITDA is before interest, depreciation and tax. DSCR compares EBITDA with scheduled principal plus interest.</li>
                 <li>This version accepts any business or project label; revenue and cost assumptions remain user-entered and should be supported by sector-specific volumes, pricing, capacity, staffing, inventory and ramp-up evidence.</li>
               </ul>
