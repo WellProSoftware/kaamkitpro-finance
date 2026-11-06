@@ -28,6 +28,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     inputs = wb.create_sheet("Model Inputs")
     costs = wb.create_sheet("Project Cost Breakdown")
     notes = wb.create_sheet("Read Me")
+    monthly = wb.create_sheet("Monthly Debt Schedule")
 
     name = projection.get("project_name", "New Project")
     project_type = projection.get("project_type", "Other")
