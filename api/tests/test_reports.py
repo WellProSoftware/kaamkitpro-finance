@@ -379,6 +379,25 @@ def test_pdf_and_excel_exports_start_from_same_project_funding_inputs():
     assert f"Debt: INR {projection['debt']:,.0f}".encode() in pdf
     assert f"Equity: INR {projection['equity']:,.0f}".encode() in pdf
 
+def test_pdf_report_labels_selected_monthly_emi_method():
+    projection = sample_projection()
+    projection["model_inputs"]["repayment_method"] = "monthly_emi"
+
+    content = build_pdf_report(projection)
+
+    assert b"Repayment method: Monthly reducing-balance EMI" in content
+    assert b"Repayment method: Monthly reducing-balance EMI." in content
+
+
+def test_pdf_report_labels_legacy_equal_annual_principal_method():
+    projection = sample_projection()
+    projection["model_inputs"]["repayment_method"] = "equal_annual_principal"
+
+    content = build_pdf_report(projection)
+
+    assert b"Repayment method: Equal annual principal" in content
+
+
 def test_pdf_report_escapes_user_supplied_project_text():
     projection = sample_projection()
     projection["project_name"] = "Project (Phase 1) \\ Finance"
