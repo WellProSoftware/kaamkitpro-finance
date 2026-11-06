@@ -609,3 +609,43 @@ def test_funding_routes_endpoint_explains_current_india_options_and_caveats():
     assert "not a subsidy" in " ".join(routes["cgtmse"]["key_conditions"])
     assert body["as_of"] == "2026-11-06"
     assert "Final eligibility" in body["disclaimer"]
+
+def test_monthly_emi_schedule_reduces_balance_and_reconciles_to_annual_projection():
+    request = {
+        **payload(),
+        "project_cost": 1_200_000,
+        "debt_pct": 50,
+        "interest_pct": 12,
+        "loan_years": 2,
+        "projection_years": 3,
+        "repayment_method": "monthly_emi",
+    }
+    response = client.post("/api/projection", json=request)
+    assert response.status_code == 200
+    body = response.json()
+    schedule = body["monthly_debt_schedule"]
+    assert len(schedule) == 24
+    assert schedule[0]["emi"] > 0
+    assert schedule[0]["interest_payment"] == 6_000
+    assert schedule[-1]["closing_balance"] == 0
+    assert round(sum(row["principal_repayment"] for row in schedule), 2) == 600_000
+    for year in range(1, 4):
+        annual = body["annual_projection"][year - 1]
+        monthly = [row for row in schedule if row["year"] == year]
+        assert round(annual["principal"], 2) == round(sum(row["principal_repayment"] for row in monthly), 2)
+        assert round(annual["interest"], 2) == round(sum(row["interest_payment"] for row in monthly), 2)
+
+
+def test_monthly_emi_schedule_supports_zero_interest_and_rejects_unknown_method():
+    zero_interest = client.post(
+        "/api/projection",
+        json={**payload(), "debt_pct": 50, "interest_pct": 0, "loan_years": 2, "repayment_method": "monthly_emi"},
+    )
+    invalid = client.post(
+        "/api/projection",
+        json={**payload(), "repayment_method": "bullet"},
+    )
+    assert zero_interest.status_code == 200
+    assert zero_interest.json()["monthly_debt_schedule"][-1]["closing_balance"] == 0
+    assert invalid.status_code == 422
+
