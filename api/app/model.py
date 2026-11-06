@@ -35,6 +35,7 @@ def build_projection(data: dict) -> dict:
     monthly_fixed_cost = _number(data, "monthly_fixed_cost", 0)
     interest_pct = _number(data, "interest_pct", 0)
     fixed_cost_inflation_pct = _number(data, "fixed_cost_inflation_pct", 0)
+    repayment_method = str(data.get("repayment_method", "equal_annual_principal"))
     loan_years = _integer(data, "loan_years", 1)
     years = _integer(data, "projection_years", 1)
 
@@ -50,6 +51,8 @@ def build_projection(data: dict) -> dict:
         raise ValueError("interest_pct must be between 0 and 100")
     if not 0 <= fixed_cost_inflation_pct <= 100:
         raise ValueError("fixed_cost_inflation_pct must be between 0 and 100")
+    if repayment_method not in {"equal_annual_principal", "monthly_emi"}:
+        raise ValueError("repayment_method must be equal_annual_principal or monthly_emi")
     if not 1 <= loan_years <= 30:
         raise ValueError("loan_years must be between 1 and 30")
     if not 1 <= years <= 100:
@@ -65,6 +68,33 @@ def build_projection(data: dict) -> dict:
     interest_rate = interest_pct / 100
     fixed_cost_inflation = fixed_cost_inflation_pct / 100
     results = []
+    monthly_schedule = []
+    if repayment_method == "monthly_emi" and debt > 0:
+        monthly_rate = interest_rate / 12
+        total_months = loan_years * 12
+        if monthly_rate == 0:
+            emi = debt / total_months
+        else:
+            factor = (1 + monthly_rate) ** total_months
+            emi = debt * monthly_rate * factor / (factor - 1)
+        balance = debt
+        for month in range(1, total_months + 1):
+            opening_balance = balance
+            interest_payment = opening_balance * monthly_rate
+            principal_payment = min(opening_balance, max(0, emi - interest_payment))
+            balance = max(0, opening_balance - principal_payment)
+            if month == total_months:
+                principal_payment = opening_balance
+                balance = 0
+            monthly_schedule.append({
+                "month": month,
+                "year": (month - 1) // 12 + 1,
+                "opening_balance": round(opening_balance, 2),
+                "emi": round(principal_payment + interest_payment, 2),
+                "principal_repayment": round(principal_payment, 2),
+                "interest_payment": round(interest_payment, 2),
+                "closing_balance": round(balance, 2),
+            })
 
     for year in range(1, years + 1):
         if year > 1:
@@ -75,11 +105,19 @@ def build_projection(data: dict) -> dict:
 
         variable_cost = revenue * variable_rate
         ebitda = revenue - variable_cost - fixed_cost
-        opening_debt = max(0, debt - annual_principal * (year - 1))
-        interest = opening_debt * interest_rate if year <= loan_years else 0
-        principal = min(opening_debt, annual_principal) if year <= loan_years else 0
-        debt_service = interest + principal
-        closing_debt = max(0, opening_debt - principal)
+        if repayment_method == "monthly_emi":
+            year_payments = [item for item in monthly_schedule if item["year"] == year]
+            opening_debt = year_payments[0]["opening_balance"] if year_payments else 0
+            interest = sum(item["interest_payment"] for item in year_payments)
+            principal = sum(item["principal_repayment"] for item in year_payments)
+            debt_service = interest + principal
+            closing_debt = year_payments[-1]["closing_balance"] if year_payments else 0
+        else:
+            opening_debt = max(0, debt - annual_principal * (year - 1))
+            interest = opening_debt * interest_rate if year <= loan_years else 0
+            principal = min(opening_debt, annual_principal) if year <= loan_years else 0
+            debt_service = interest + principal
+            closing_debt = max(0, opening_debt - principal)
 
         results.append({
             "year": year,
@@ -108,6 +146,7 @@ def build_projection(data: dict) -> dict:
             "monthly_fixed_cost": monthly_fixed_cost,
             "interest_pct": interest_pct,
             "fixed_cost_inflation_pct": fixed_cost_inflation_pct,
+            "repayment_method": repayment_method,
             "loan_years": loan_years,
             "projection_years": years,
         },
@@ -115,6 +154,7 @@ def build_projection(data: dict) -> dict:
         "debt": round(debt, 2),
         "equity": round(equity, 2),
         "annual_projection": results,
+        "monthly_debt_schedule": monthly_schedule,
         "debt_schedule": [
             {"year": row["year"], "opening_balance": row["opening_debt"], "principal_repayment": row["principal"], "interest_payment": row["interest"], "total_debt_service": row["debt_service"], "closing_balance": row["closing_debt"]}
             for row in results
