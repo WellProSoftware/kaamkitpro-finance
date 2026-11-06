@@ -261,7 +261,7 @@ export default function Home() {
       </header>
 
       <section className="hero">
-        <div><div className="eyebrow">Financial planning workspace</div><h1>Turn your project into a clear financial plan.</h1><p>Build a practical first-pass projection for a hospital, pharmacy, optical store, retail business, warehouse or manufacturing project.</p></div>
+        <div><div className="eyebrow">Financial planning workspace</div><h1>Turn your project into a clear financial plan.</h1><p>Build a flexible first-pass projection for any business, industry, service, manufacturing activity, expansion or new project.</p></div>
         <div className="actions"><button className="secondary" onClick={saveAssumptions}>Save draft</button><button className="secondary" onClick={exportCsv} disabled={exportsDisabled}>Export CSV</button><button className="secondary" onClick={() => void exportReport("excel")} disabled={exportsDisabled}>{exporting === "excel" ? "Preparing Excel…" : "Export Excel"}</button><button className="secondary" onClick={() => void exportReport("pdf")} disabled={exportsDisabled}>{exporting === "pdf" ? "Preparing PDF…" : "Export PDF"}</button></div>
       </section>
 
@@ -271,7 +271,7 @@ export default function Home() {
           {inputError && <p className="section-desc" role="alert" style={{color:"#b42318",marginBottom:12}}>{inputError}</p>}
           <div className="fields">
             <div className="field full"><label htmlFor="projectName">Project name</label><input id="projectName" value={inputs.projectName} onChange={(e) => update("projectName", e.target.value)} maxLength={120}/></div>
-            <div className="field full"><label htmlFor="projectType">Business type</label><select id="projectType" value={inputs.projectType} onChange={(e) => update("projectType", e.target.value)}>{["Hospital","Pharmacy","Optical","Retail","Warehouse","Manufacturing","Services","Other"].map(x=><option key={x}>{x}</option>)}</select></div>
+            <div className="field full"><label htmlFor="projectType">Business / industry / project activity</label><input id="projectType" value={inputs.projectType} onChange={(e) => update("projectType", e.target.value)} maxLength={80} placeholder="Enter any business, industry or project activity" /><p className="section-desc">Open text field: enter any sector, profession, service, manufacturing activity, expansion or new business.</p></div>
             <div className="field"><label htmlFor="projectCost">Total project cost (₹)</label><div className="input-wrap"><span>₹</span><input id="projectCost" type="number" min="0" value={inputs.projectCost} onChange={(e) => update("projectCost", e.target.value)}/></div></div>
             <div className="field full"><label><input type="checkbox" checked={useItemizedCosts} onChange={(e) => { setUseItemizedCosts(e.target.checked); setSaved(false); }} /> Use itemized project costs</label><p className="section-desc">Enter setup costs by category. The total will automatically replace the aggregate project cost for projections and Excel/PDF exports.</p></div>
             {useItemizedCosts && <div className="field full"><div className="table-wrap"><table><thead><tr><th>Project cost category</th><th>Amount (₹)</th></tr></thead><tbody>{costLabels.map((key) => <tr key={key}><td>{key}</td><td><input aria-label={key} type="number" min="0" max={MAX_PROJECT_COST} value={itemizedCosts[key]} onChange={(e) => { const value = Math.min(MAX_PROJECT_COST, Math.max(0, Number(e.target.value) || 0)); setItemizedCosts((prev) => ({ ...prev, [key]: value })); setSaved(false); }} /></td></tr>)}</tbody><tfoot><tr><th>Total itemized project cost</th><th>{money(itemizedTotal)}</th></tr></tfoot></table></div>{itemizedCostsError && <p className="section-desc" role="alert" style={{color:"#b42318",marginTop:10}}>{itemizedCostsError}</p>}</div>}
@@ -306,7 +306,7 @@ export default function Home() {
                 <li>Variable costs move with revenue. Monthly fixed costs are annualised and increased by the annual fixed-cost inflation assumption.</li>
                 <li>Debt is repaid using equal annual principal during the loan tenure. Interest is calculated on each year's opening loan balance; this is not a monthly EMI schedule.</li>
                 <li>EBITDA is before interest, depreciation and tax. DSCR compares EBITDA with scheduled principal plus interest.</li>
-                <li>The model does not yet forecast tax, depreciation, capex, working capital movements, inventory, monthly seasonality, or sector-specific operating drivers.</li>
+                <li>This version accepts any business or project label; revenue and cost assumptions remain user-entered and should be supported by sector-specific volumes, pricing, capacity, staffing, inventory and ramp-up evidence.</li>
               </ul>
               <p style={{margin:"8px 0 0"}}>Treat outputs as planning estimates. Validate assumptions and financing terms with your accountant and lender before relying on them for investment or credit decisions.</p>
             </div>
