@@ -595,3 +595,17 @@ def test_excel_and_pdf_annual_rows_reconcile_to_projection_api():
             for value in normalized_values
         )
 
+
+
+def test_funding_routes_endpoint_explains_current_india_options_and_caveats():
+    response = client.get("/api/funding/routes")
+    assert response.status_code == 200
+    body = response.json()
+    routes = {route["id"]: route for route in body["routes"]}
+    assert {"cgtmse", "mudra", "pmegp", "stand_up_india_legacy", "private_debt", "equity_investor"} <= set(routes)
+    assert routes["mudra"]["loan_max"] == 2_000_000
+    assert "successfully repaid" in " ".join(routes["mudra"]["key_conditions"])
+    assert "not presented as currently open" in routes["stand_up_india_legacy"]["screening"]
+    assert "not a subsidy" in " ".join(routes["cgtmse"]["key_conditions"])
+    assert body["as_of"] == "2026-11-06"
+    assert "Final eligibility" in body["disclaimer"]
