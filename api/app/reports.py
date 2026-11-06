@@ -227,13 +227,13 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     for year in range(1, 101):
         r = 9 + year
         assumptions.cell(r, 1, f'=IF(ROW()-9<=\'Model Inputs\'!$B$13,ROW()-9,"")')
-        assumptions.cell(r, 2, f'=IF(A{r}="","",MAX(0,$B$6-(A{r}-1)*$B$6/\'Model Inputs\'!$B$12))')
+        assumptions.cell(r, 2, f'=IF(A{r}="","",IF(\'Model Inputs\'!$B$18="monthly_emi",IF(A{r}<=\'Model Inputs\'!$B$12,INDEX(\'Monthly Debt Schedule\'!$C$3:$C$362,(A{r}-1)*12+1),0),MAX(0,$B$6-(A{r}-1)*$B$6/\'Model Inputs\'!$B$12)))')
         assumptions.cell(r, 3, f'=IF(A{r}="","",\'Model Inputs\'!$B$7*12*(1+\'Model Inputs\'!$B$8/100)^(A{r}-1))')
         assumptions.cell(r, 4, f'=IF(A{r}="","",C{r}*\'Model Inputs\'!$B$9/100)')
         assumptions.cell(r, 5, f'=IF(A{r}="","",\'Model Inputs\'!$B$10*12*(1+\'Model Inputs\'!$B$17/100)^(A{r}-1))')
         assumptions.cell(r, 6, f'=IF(A{r}="","",C{r}-D{r}-E{r})')
-        assumptions.cell(r, 7, f'=IF(A{r}="","",IF(A{r}<=\'Model Inputs\'!$B$12,B{r}*\'Model Inputs\'!$B$11/100,0))')
-        assumptions.cell(r, 8, f'=IF(A{r}="","",IF(A{r}<=\'Model Inputs\'!$B$12,MIN(B{r},$B$6/\'Model Inputs\'!$B$12),0))')
+        assumptions.cell(r, 7, f'=IF(A{r}="","",IF(\'Model Inputs\'!$B$18="monthly_emi",SUMIFS(\'Monthly Debt Schedule\'!$F$3:$F$362,\'Monthly Debt Schedule\'!$B$3:$B$362,A{r}),IF(A{r}<=\'Model Inputs\'!$B$12,B{r}*\'Model Inputs\'!$B$11/100,0)))')
+        assumptions.cell(r, 8, f'=IF(A{r}="","",IF(\'Model Inputs\'!$B$18="monthly_emi",SUMIFS(\'Monthly Debt Schedule\'!$E$3:$E$362,\'Monthly Debt Schedule\'!$B$3:$B$362,A{r}),IF(A{r}<=\'Model Inputs\'!$B$12,MIN(B{r},$B$6/\'Model Inputs\'!$B$12),0)))')
         assumptions.cell(r, 9, f'=IF(A{r}="","",G{r}+H{r})')
         assumptions.cell(r, 10, f'=IF(OR(A{r}="",I{r}=0),"",F{r}/I{r})')
         assumptions.cell(r, 11, f'=IF(A{r}="","",F{r}-I{r})')
