@@ -298,7 +298,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
 
     notes["A1"] = "Important limitations"
     notes.append(["This workbook is an illustrative planning estimate, not an audited financial statement or bank-approved DPR."])
-    notes.append(["The debt schedule uses equal annual principal repayments with interest calculated on opening balance; it is not an EMI schedule."])
+    notes.append(["This workbook currently uses equal annual principal repayments. Monthly EMI is available in the projection API but is not yet wired into the editable workbook."])
     notes.append(["Profit before tax shown is before depreciation and tax; it is not net profit."])
     notes.append(["Edit yellow cells on Model Inputs; the annual forecast, summary and chart recalculate in Excel."])
     notes.append(["Formula-driven sheets are protected against accidental edits; yellow input cells remain editable. Worksheet protection is not password security."])
@@ -355,10 +355,13 @@ def build_pdf_report(projection: dict[str, Any]) -> bytes:
             f"{row.get('profit_before_tax_before_depreciation', row.get('ebitda', 0) - row.get('interest', 0)):,.0f} | "
             f"{break_even}"
         )
+    repayment_method = projection.get("model_inputs", {}).get("repayment_method", "equal_annual_principal")
+    repayment_label = "Monthly reducing-balance EMI" if repayment_method == "monthly_emi" else "Equal annual principal"
+    heading.insert(3, f"Repayment method: {repayment_label}")
     disclaimer = [
         "",
-        "Disclaimer: Illustrative planning estimate only. Equal annual principal repayment is used, not EMI.",
-        "Interest is calculated on opening balance. Profit before tax is before depreciation and tax.",
+        f"Disclaimer: Illustrative planning estimate only. Repayment method: {repayment_label}.",
+        "Interest is calculated on the outstanding loan balance. Profit before tax is before depreciation and tax.",
         "Cash after debt (pre-tax, pre-capex) is EBITDA less interest and principal; it is not free cash flow.",
         "This is not an audited statement, loan approval, or bank-approved DPR. Validate assumptions before use.",
     ]
