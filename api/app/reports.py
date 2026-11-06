@@ -389,6 +389,23 @@ def build_pdf_report(projection: dict[str, Any]) -> bytes:
         )
     repayment_method = projection.get("model_inputs", {}).get("repayment_method", "equal_annual_principal")
     repayment_label = "Monthly reducing-balance EMI" if repayment_method == "monthly_emi" else "Equal annual principal"
+    monthly_schedule_lines = []
+    if repayment_method == "monthly_emi":
+        monthly_schedule = projection.get("monthly_debt_schedule", [])
+        monthly_schedule_lines = [
+            "Monthly EMI repayment schedule | Month | Opening balance | EMI | Principal | Interest | Closing balance"
+        ]
+        for item in monthly_schedule:
+            monthly_schedule_lines.append(
+                f"Month {item.get('month', '')} | "
+                f"{item.get('opening_balance', 0):,.2f} | "
+                f"{item.get('emi', 0):,.2f} | "
+                f"{item.get('principal_repayment', 0):,.2f} | "
+                f"{item.get('interest_payment', 0):,.2f} | "
+                f"{item.get('closing_balance', 0):,.2f}"
+            )
+        if not monthly_schedule:
+            monthly_schedule_lines.append("Monthly schedule not supplied in this projection.")
     heading.insert(3, f"Repayment method: {repayment_label}")
     disclaimer = [
         "",
@@ -409,12 +426,16 @@ def build_pdf_report(projection: dict[str, Any]) -> bytes:
     wrapped_rows = []
     for row in rows:
         wrapped_rows.extend(wrap(row, width=112) or [""])
+    wrapped_monthly_schedule = []
+    for line in monthly_schedule_lines:
+        wrapped_monthly_schedule.extend(wrap(line, width=112) or [""])
     wrapped_disclaimer = []
     for line in disclaimer:
         wrapped_disclaimer.extend(wrap(line, width=112) or [""])
 
-    # Repeat the report heading and column labels on each page.
-    body_lines = wrapped_rows + wrapped_disclaimer
+    # Include the complete monthly schedule when EMI is selected; the annual
+    # projection remains the primary summary and the schedule provides detail.
+    body_lines = wrapped_rows + wrapped_monthly_schedule + wrapped_disclaimer
     first_page_capacity = 44 - len(wrapped_heading) - 2
     other_page_capacity = 44 - len(wrapped_heading) - 2
     page_chunks = []
