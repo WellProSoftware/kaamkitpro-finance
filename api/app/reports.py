@@ -84,7 +84,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
         inputs[cell].number_format = "0.00"
     for cell in ("B7", "B10"):
         inputs[cell].number_format = '"INR " #,##0.00'
-    for cell in ("B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13", "B14", "B15", "B17"):
+    for cell in ("B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13", "B14", "B15", "B17", "B18"):
         inputs[cell].fill = PatternFill("solid", fgColor="FFF2CC")
     # Guide spreadsheet users to valid assumptions before formulas recalculate.
     from openpyxl.worksheet.datavalidation import DataValidation
