@@ -296,6 +296,29 @@ export default function Home() {
             <div className="stat green"><span>Owner contribution</span><strong>{money(model.equity)}</strong><small>Estimated equity funding</small></div>
           </div>
           <div className="card" style={{marginBottom:16}}>
+            <h2 className="section-title">Funding routes &amp; scheme reference (India)</h2>
+            <p className="section-desc">Use this as a first-pass funding shortlist for the estimated requirement of {money(model.debt)}. It is not an eligibility certificate or loan sanction.</p>
+            <div className="note">
+              <strong>Government-backed / bank routes</strong>
+              <ul style={{margin:"8px 0 0",paddingLeft:20}}>
+                <li><strong>CGTMSE:</strong> Eligible micro and small enterprises may seek lender credit with guarantee cover. Current scheme ceiling is up to ₹10 crore; Udyam registration and lender appraisal apply. CGTMSE does not lend directly and is not a subsidy.</li>
+                <li><strong>MUDRA (PMMY):</strong> Shishu up to ₹50,000; Kishore above ₹50,000–₹5 lakh; Tarun above ₹5–₹10 lakh; Tarun Plus above ₹10–₹20 lakh only after successful repayment of an earlier Tarun loan.</li>
+                <li><strong>PMEGP:</strong> New eligible non-farm micro-enterprises only under the new-unit route. Margin-money subsidy project ceilings are ₹50 lakh for manufacturing and ₹20 lakh for service/business; applicant category and rural/urban location affect contribution and subsidy rates. Existing-unit expansion is generally not eligible under the new-unit route.</li>
+                <li><strong>Stand-Up India:</strong> Legacy scheme period ended on 31 March 2025. A successor programme was announced; verify implementation and current application availability with the bank before relying on legacy terms.</li>
+              </ul>
+            </div>
+            <div className="note" style={{marginTop:10}}>
+              <strong>Private funding routes</strong>
+              <ul style={{margin:"8px 0 0",paddingLeft:20}}>
+                <li><strong>Bank / NBFC term loan or working capital:</strong> compare sanction amount, reducing-balance rate, processing fee, security, moratorium, monthly EMI and prepayment charges.</li>
+                <li><strong>Private debt / structured finance:</strong> compare effective annual cost, collateral, covenants, personal guarantees and default clauses; verify the lender is regulated where applicable.</li>
+                <li><strong>Angel / strategic / private equity:</strong> prepare valuation, cap table, unit economics, market proof, milestones, governance rights, dilution and exit scenarios. Equity is not a loan and has no fixed EMI.</li>
+              </ul>
+            </div>
+            <p className="section-desc" style={{marginTop:12}}>Official references: <a href="https://financialservices.gov.in/pradhan-mantri-mudra-yojana-pmmy" target="_blank" rel="noreferrer">MUDRA / DFS</a> · <a href="https://www.cgtmse.in/" target="_blank" rel="noreferrer">CGTMSE</a> · <a href="https://www.kviconline.gov.in/pmegpeportal/" target="_blank" rel="noreferrer">PMEGP portal</a> · <a href="https://www.financialservices.gov.in/stand-india-scheme-supi" target="_blank" rel="noreferrer">Stand-Up India status</a> · <a href="https://www.jansamarth.in/" target="_blank" rel="noreferrer">JanSamarth</a>.</p>
+            <p className="note">Scheme and bank terms can change. Final eligibility, margin, interest, collateral, subsidy, guarantee cover and sanction are decided by the implementing agency or lender. Re-check official circulars and the lender's Key Facts Statement on the application date.</p>
+          </div>
+          <div className="card" style={{marginBottom:16}}>
             <h2 className="section-title">Annual financial projection</h2><p className="section-desc">Illustrative operating model · INR</p>
             <div className="table-wrap"><table><thead><tr><th>Year</th><th>Revenue</th><th>EBITDA</th><th>Debt service</th><th>DSCR</th><th>Cash after debt (pre-tax, pre-capex)</th></tr></thead><tbody>{model.rows.map(r=><tr key={r.year}><td>Year {r.year}</td><td>{money(r.revenue)}</td><td className={r.ebitda>=0?"positive":"negative"}>{money(r.ebitda)}</td><td>{money(r.debtService)}</td><td>{r.dscr===null?"—":r.dscr.toFixed(2)+"x"}</td><td className={r.cash>=0?"positive":"negative"}>{money(r.cash)}</td></tr>)}</tbody></table></div>
             <div className="note">DSCR = EBITDA ÷ scheduled principal and interest. Cash after debt service = EBITDA less interest and principal; it is pre-tax and pre-capex, not free cash flow.</div>
