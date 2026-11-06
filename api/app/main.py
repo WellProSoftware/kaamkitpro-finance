@@ -7,13 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
+from .funding import list_funding_routes
 from .model import build_projection
 from .reports import build_excel_report, build_pdf_report
 
-app = FastAPI(title="KaamKitPro Finance API", version="0.3.0")
+app = FastAPI(title="KaamKitPro Finance API", version="0.4.0")
 
-# Configure explicit staging frontend origins via FINANCE_CORS_ORIGINS.
-# Keep localhost available for local development; do not use wildcard origins.
 _default_origins = "http://localhost:3000,http://127.0.0.1:3000"
 _allowed_origins = [
     origin.strip()
@@ -46,15 +45,10 @@ class ProjectionInput(BaseModel):
 
 
 ITEMIZED_COST_CATEGORIES = {
-    "Outsourcing",
-    "Warehouse setup",
-    "Hospital setup / expansion",
-    "Retail / pharmacy setup or expansion",
-    "Optical setup or expansion",
-    "Equipment and technology",
-    "Licences, deposits and professional fees",
-    "Initial inventory and working capital",
-    "Other project costs",
+    "Outsourcing", "Warehouse setup", "Hospital setup / expansion",
+    "Retail / pharmacy setup or expansion", "Optical setup or expansion",
+    "Equipment and technology", "Licences, deposits and professional fees",
+    "Initial inventory and working capital", "Other project costs",
 }
 
 
@@ -90,8 +84,13 @@ def root():
         "service": "KaamKitPro Finance API",
         "docs": "/docs",
         "health": "/health",
-        "endpoints": ["/api/projection", "/api/reports/excel", "/api/reports/pdf"],
+        "endpoints": ["/api/projection", "/api/funding/routes", "/api/reports/excel", "/api/reports/pdf"],
     }
+
+
+@app.get("/api/funding/routes")
+def funding_routes():
+    return list_funding_routes()
 
 
 def validated_projection(data: ProjectionInput) -> dict[str, Any]:
