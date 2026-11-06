@@ -207,7 +207,7 @@ def test_excel_monthly_emi_schedule_and_repayment_selector():
 
     assert schedule["A3"].value == '=IF(\'Model Inputs\'!$B$18="monthly_emi",1,"")'
     assert "PMT(" in schedule["D3"].value
-    assert "B12*12" in schedule["D3"].value
+    assert "'Model Inputs'!$B$12*12" in schedule["D3"].value
     assert schedule["G362"].value.startswith('=IF(A362="","",MAX(0,C362-E362))')
     assert "SUMIFS" in assumptions["G10"].value
     assert "SUMIFS" in assumptions["H10"].value
