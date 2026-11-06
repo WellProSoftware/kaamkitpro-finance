@@ -37,5 +37,19 @@ Select **Itemized costs** in Model Inputs to use the Project Cost Breakdown tota
 ## Validation
 Application inputs are range-checked, with Excel data validation where supported. Reconcile project costs against quotations and have a qualified finance professional validate full project cash flows before sharing with a lender or investor.
 
+
+## India funding route reference
+The API exposes `GET /api/funding/routes` with a dated, indicative reference for CGTMSE, PMMY/MUDRA, PMEGP, the legacy Stand-Up India scheme status, private debt and equity investors. This is a route catalogue, not an automated eligibility decision. The catalogue records its review date and links to official sources; it must be refreshed against current scheme circulars before a lender submission.
+
+### Funding facts currently reflected
+- **CGTMSE:** guarantee support is routed through a participating lender; it is not a direct loan, subsidy or waiver. The current reference reflects an eligible facility ceiling of up to ₹10 crore, subject to scheme rules and lender appraisal.
+- **PMMY/MUDRA:** Shishu up to ₹50,000; Kishore above ₹50,000 to ₹5 lakh; Tarun above ₹5 lakh to ₹10 lakh; Tarun Plus above ₹10 lakh to ₹20 lakh only for a borrower who successfully repaid an earlier Tarun loan.
+- **PMEGP:** the new-unit route is for eligible new non-farm micro-enterprises; current published subsidy-linked project ceilings are ₹50 lakh for manufacturing and ₹20 lakh for service/business. Existing-unit expansion should not be presented as eligible under the new-unit route.
+- **Stand-Up India:** the original scheme period ended on 31 March 2025. The announced successor programme must be confirmed as operational before representing it as open for applications.
+- **Private debt and equity:** these are separate capital routes. Debt requires effective-cost and repayment analysis; equity requires valuation, dilution, governance and exit analysis.
+
+## Universal project modelling approach
+The project-type field is free text so users can describe any industry or project. The current core model is a generic annual operating forecast based on user-entered revenue, growth, variable-cost ratio, fixed costs and debt assumptions. It is not yet a fully sector-specific driver model: sector-specific volume, price, capacity, utilization, inventory, working-capital, depreciation, tax and monthly seasonality modules remain future modelling work. Do not represent a generic estimate as a complete bank DPR or investor due-diligence pack.
+
 ## Development and safety
 This project is developed and tested separately before production website changes. No deployment is performed by this repository workflow. Never commit passwords, API keys, access tokens or other secrets. Keep the production website, DNS, production analytics and live payments unchanged during development.
