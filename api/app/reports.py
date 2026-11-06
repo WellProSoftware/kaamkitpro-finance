@@ -73,6 +73,10 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     inputs.append(["Aggregate project cost", project_cost])
     inputs.append(["Itemized project costs total", "='Project Cost Breakdown'!B12"])
     inputs.append(["Annual fixed-cost inflation (%)", fixed_cost_inflation_pct])
+    repayment_method = model.get("repayment_method", "equal_annual_principal")
+    if repayment_method not in ("equal_annual_principal", "monthly_emi"):
+        repayment_method = "equal_annual_principal"
+    inputs.append(["Repayment method", repayment_method])
     inputs["B5"].number_format = '"INR " #,##0.00'
     inputs["B15"].number_format = '"INR " #,##0.00'
     inputs["B16"].number_format = '"INR " #,##0.00'
@@ -110,6 +114,12 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
         validation.showInputMessage = True
         inputs.add_data_validation(validation)
         validation.add(inputs[cell])
+    repayment_validation = DataValidation(type="list", formula1='"equal_annual_principal,monthly_emi"', allow_blank=False)
+    repayment_validation.showErrorMessage = True
+    repayment_validation.errorTitle = "Select a repayment method"
+    repayment_validation.error = "Choose equal_annual_principal or monthly_emi."
+    inputs.add_data_validation(repayment_validation)
+    repayment_validation.add(inputs["B18"])
     basis_validation = DataValidation(type="list", formula1='"Aggregate input,Itemized costs"', allow_blank=False)
     basis_validation.errorTitle = "Select a cost basis"
     basis_validation.error = "Choose Aggregate input or Itemized costs."
@@ -122,7 +132,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     inputs.column_dimensions["B"].width = 24
     inputs.freeze_panes = "A2"
     # Protect calculated funding cells while leaving all intended assumptions editable.
-    for cell_ref in ("B2", "B3", "B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13", "B14", "B15"):
+    for cell_ref in ("B2", "B3", "B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13", "B14", "B15", "B18"):
         input_protection = copy(inputs[cell_ref].protection)
         input_protection.locked = False
         inputs[cell_ref].protection = input_protection
@@ -247,7 +257,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     summary["A110"] = "Planning note"
     summary["B110"] = "Illustrative estimate only; validate assumptions before lending or investment decisions."
 
-    for ws in (summary, assumptions, inputs, costs, notes):
+    for ws in (summary, assumptions, inputs, costs, notes, monthly):
         ws.sheet_view.showGridLines = False
         ws.sheet_properties.pageSetUpPr.fitToPage = True
         ws.page_setup.fitToWidth = 1
@@ -257,14 +267,14 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
         ws.oddFooter.center.text = "KaamKitPro Finance | Illustrative planning estimate"
         ws.oddFooter.right.text = "Page &P of &N"
 
-    for ws, end_col in ((summary, 6), (assumptions, 14), (inputs, 2), (costs, 3), (notes, 1)):
+    for ws, end_col in ((summary, 6), (assumptions, 14), (inputs, 2), (costs, 3), (notes, 1), (monthly, 7)):
         ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=end_col)
         ws["A1"].fill = PatternFill("solid", fgColor=NAVY)
         ws["A1"].font = Font(bold=True, color=WHITE, size=16)
         ws["A1"].alignment = Alignment(vertical="center")
         ws.row_dimensions[1].height = 30
 
-    for ws, header_row in ((summary,7),(assumptions,9),(costs,2)):
+    for ws, header_row in ((summary,7),(assumptions,9),(costs,2),(monthly,2)):
         for cell in ws[header_row]:
             cell.fill = PatternFill("solid", fgColor=BLUE)
             cell.font = Font(bold=True, color=WHITE)
@@ -276,6 +286,11 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     for col in "ABCDEF":
         summary.column_dimensions[col].width = 22
     summary.column_dimensions["A"].width = 25
+    monthly.freeze_panes = "A3"
+    monthly.auto_filter.ref = "A2:G362"
+    for col, width in enumerate([12,16,20,20,20,20,20], 1):
+        monthly.column_dimensions[get_column_letter(col)].width = width
+    monthly.protection.sheet = True
     summary.freeze_panes = "A8"
     assumptions.freeze_panes = "A10"
     summary.auto_filter.ref = "A7:F107"
@@ -315,7 +330,7 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
 
     notes["A1"] = "Important limitations"
     notes.append(["This workbook is an illustrative planning estimate, not an audited financial statement or bank-approved DPR."])
-    notes.append(["This workbook currently uses equal annual principal repayments. Monthly EMI is available in the projection API but is not yet wired into the editable workbook."])
+    notes.append(["Choose the repayment method in Model Inputs. Monthly EMI uses a reducing-balance monthly schedule; equal annual principal remains the default."])
     notes.append(["Profit before tax shown is before depreciation and tax; it is not net profit."])
     notes.append(["Edit yellow cells on Model Inputs; the annual forecast, summary and chart recalculate in Excel."])
     notes.append(["Formula-driven sheets are protected against accidental edits; yellow input cells remain editable. Worksheet protection is not password security."])
