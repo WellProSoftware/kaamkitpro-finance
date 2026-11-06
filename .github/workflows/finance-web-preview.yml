@@ -1,6 +1,12 @@
 name: Finance Web Preview
 
 on:
+  push:
+    branches:
+      - feature/excel-live-recalculation
+    paths:
+      - "web/**"
+      - ".github/workflows/finance-web-preview.yml"
   workflow_dispatch:
 
 permissions:
