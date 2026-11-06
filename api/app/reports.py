@@ -188,6 +188,22 @@ def build_excel_report(projection: dict[str, Any]) -> bytes:
     costs.add_data_validation(total_cost_validation)
     total_cost_validation.add("B3:B11")
 
+    # Monthly reducing-balance schedule (360 months); formulas activate only for EMI.
+    monthly.append(["KAAMKITPRO FINANCE | MONTHLY DEBT SCHEDULE"])
+    monthly.append(["Month", "Projection year", "Opening balance", "EMI", "Principal", "Interest", "Closing balance"])
+    for month in range(1, 361):
+        r = month + 2
+        if month == 1:
+            monthly.cell(r, 1, '=IF(\'Model Inputs\'!$B$18="monthly_emi",1,"")')
+        else:
+            monthly.cell(r, 1, f'=IF(AND(\'Model Inputs\'!$B$18="monthly_emi",A{r-1}<\'Model Inputs\'!$B$12*12),A{r-1}+1,"")')
+        monthly.cell(r, 2, f'=IF(A{r}="","",ROUNDUP(A{r}/12,0))')
+        monthly.cell(r, 3, f'=IF(A{r}="","",IF(A{r}=1,\'Model Inputs\'!$B$5*\'Model Inputs\'!$B$6/100,G{r-1}))')
+        monthly.cell(r, 4, f'=IF(A{r}="","",IF(\'Model Inputs\'!$B$11=0,\'Model Inputs\'!$B$5*\'Model Inputs\'!$B$6/100/(\'Model Inputs\'!$B$12*12),-PMT(\'Model Inputs\'!$B$11/1200,\'Model Inputs\'!$B$12*12,\'Model Inputs\'!$B$5*\'Model Inputs\'!$B$6/100)))')
+        monthly.cell(r, 6, f'=IF(A{r}="","",C{r}*\'Model Inputs\'!$B$11/1200)')
+        monthly.cell(r, 5, f'=IF(A{r}="","",MIN(C{r},IF(A{r}=\'Model Inputs\'!$B$12*12,C{r},MAX(0,D{r}-F{r}))))')
+        monthly.cell(r, 7, f'=IF(A{r}="","",MAX(0,C{r}-E{r}))')
+
     # Detailed projection formulas refer to editable inputs; no fixed forecast values.
     assumptions.append(["KAAMKITPRO FINANCE | LIVE ANNUAL PROJECTION"])
     assumptions.append(["Project name", "='Model Inputs'!B2"])
