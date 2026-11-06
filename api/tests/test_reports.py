@@ -618,3 +618,37 @@ def test_pdf_report_wraps_extremely_long_project_names_without_losing_text():
     assert b"X" * 112 in content
     assert b"X" * 26 in content
     assert content.count(b"/Type /Page /Parent") == 1
+
+
+def test_pdf_report_includes_complete_monthly_emi_schedule():
+    projection = sample_projection()
+    projection["model_inputs"]["repayment_method"] = "monthly_emi"
+    projection["monthly_debt_schedule"] = [
+        {
+            "month": month,
+            "opening_balance": 600_000 - (month - 1) * 25_000,
+            "emi": 30_000,
+            "principal_repayment": 25_000,
+            "interest_payment": 5_000,
+            "closing_balance": 600_000 - month * 25_000,
+        }
+        for month in range(1, 25)
+    ]
+
+    content = build_pdf_report(projection)
+
+    assert b"Monthly EMI repayment schedule" in content
+    assert b"Month 1 | 600,000.00 | 30,000.00 | 25,000.00 | 5,000.00 | 575,000.00" in content
+    assert b"Month 24 | 25,000.00 | 30,000.00 | 25,000.00 | 5,000.00 | 0.00" in content
+    assert content.count(b"/Type /Page /Parent") >= 2
+
+
+def test_pdf_report_does_not_add_monthly_schedule_for_annual_principal():
+    projection = sample_projection()
+    projection["model_inputs"]["repayment_method"] = "equal_annual_principal"
+    projection["monthly_debt_schedule"] = []
+
+    content = build_pdf_report(projection)
+
+    assert b"Monthly EMI repayment schedule" not in content
+    assert b"Repayment method: Equal annual principal" in content
