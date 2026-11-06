@@ -68,6 +68,7 @@ def test_excel_model_inputs_drive_projection_and_summary_formulas():
     assert inputs["B8"].value == 5
     assert inputs["B12"].value == 5
     assert inputs["B13"].value == 5
+    assert inputs["B18"].value == "equal_annual_principal"
 
     # Forecast formulas reference editable input cells rather than fixed values.
     assert "'Model Inputs'!$B$7" in assumptions["C10"].value
@@ -80,6 +81,8 @@ def test_excel_model_inputs_drive_projection_and_summary_formulas():
     assert inputs["B17"].value == 5
     assert "'Model Inputs'!$B$11" in assumptions["G10"].value
     assert "'Model Inputs'!$B$12" in assumptions["H10"].value
+    assert "SUMIFS('Monthly Debt Schedule'!$F$3:$F$362" in assumptions["G10"].value
+    assert "SUMIFS('Monthly Debt Schedule'!$E$3:$E$362" in assumptions["H10"].value
     assert assumptions["C11"].value.endswith("^(A11-1))")
 
     assert summary["B8"].value == '=IF($A8="","",\'Assumptions\'!C10)'
@@ -184,6 +187,55 @@ def test_excel_report_includes_debt_balance_columns():
     assert sheet["M10"].value == '=IF(A10="","",F10-G10)'
 
 
+
+def test_excel_monthly_emi_schedule_and_repayment_selector():
+    workbook = workbook_for()
+    inputs = workbook["Model Inputs"]
+    schedule = workbook["Monthly Debt Schedule"]
+    assumptions = workbook["Assumptions"]
+
+    assert inputs["B18"].value == "equal_annual_principal"
+    assert inputs["B18"].fill.fgColor.rgb.endswith("FFF2CC")
+    assert inputs["B18"].protection.locked is False
+    repayment_validation = next(
+        validation for validation in inputs.data_validations.dataValidation
+        if "B18" in str(validation.sqref)
+    )
+    assert repayment_validation.type == "list"
+    assert "monthly_emi" in repayment_validation.formula1
+    assert "equal_annual_principal" in repayment_validation.formula1
+
+    assert schedule["A3"].value == '=IF(\'Model Inputs\'!$B$18="monthly_emi",1,"")'
+    assert "PMT(" in schedule["D3"].value
+    assert "B12*12" in schedule["D3"].value
+    assert schedule["G362"].value.startswith('=IF(A362="","",MAX(0,C362-E362))')
+    assert "SUMIFS" in assumptions["G10"].value
+    assert "SUMIFS" in assumptions["H10"].value
+
+    saved = BytesIO()
+    workbook.save(saved)
+    saved.seek(0)
+    reopened = load_workbook(saved, data_only=False)
+    assert "Monthly Debt Schedule" in reopened.sheetnames
+    assert reopened["Monthly Debt Schedule"]["D3"].value == schedule["D3"].value
+    assert reopened["Model Inputs"]["B18"].value == "equal_annual_principal"
+    assert reopened["Model Inputs"].protection.sheet is True
+
+
+def test_excel_monthly_emi_schedule_uses_selected_method_and_360_month_capacity():
+    projection = sample_projection()
+    projection["model_inputs"]["repayment_method"] = "monthly_emi"
+    workbook = workbook_for(projection)
+    inputs = workbook["Model Inputs"]
+    schedule = workbook["Monthly Debt Schedule"]
+
+    assert inputs["B18"].value == "monthly_emi"
+    assert schedule["A3"].value == '=IF(\'Model Inputs\'!$B$18="monthly_emi",1,"")'
+    assert "PMT(" in schedule["D362"].value
+    assert "SUMIFS" in workbook["Assumptions"]["G10"].value
+
+
+
 def test_pdf_report_has_pdf_signature():
     content = build_pdf_report(sample_projection())
     assert content.startswith(b"%PDF")
@@ -209,7 +261,7 @@ def test_pdf_report_includes_profit_and_break_even_columns():
 def test_excel_readme_discloses_equal_principal_not_emi():
     workbook = workbook_for()
     notes = workbook["Read Me"]
-    assert "not an EMI schedule" in notes["A3"].value
+    assert "Monthly EMI uses a reducing-balance monthly schedule" in notes["A3"].value
     assert "not net profit" in notes["A4"].value
     assert "Edit yellow cells on Model Inputs" in notes["A5"].value
 
@@ -451,7 +503,7 @@ def test_model_inputs_protects_calculated_cells_and_keeps_assumptions_editable()
     assert inputs["B5"].protection.locked is True
     assert inputs["B16"].protection.locked is True
     assert inputs["B4"].protection.locked is True
-    editable_cells = ("B2", "B3", "B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13", "B14", "B15")
+    editable_cells = ("B2", "B3", "B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13", "B14", "B15", "B18")
     assert all(inputs[cell].protection.locked is False for cell in editable_cells)
 
     saved = BytesIO()
@@ -527,6 +579,7 @@ def test_reports_handle_empty_projection_payload():
         "Model Inputs",
         "Project Cost Breakdown",
         "Read Me",
+        "Monthly Debt Schedule",
     ]
     assert workbook["Model Inputs"]["B2"].value == "New Project"
     assert workbook["Model Inputs"]["B5"].value == '=IF(B14="Itemized costs",B16,B15)'
