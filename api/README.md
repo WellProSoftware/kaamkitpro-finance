@@ -46,6 +46,43 @@ not include the production domain until a separately approved production plan.
 
 The request fields and validation rules are visible in the FastAPI docs at `/docs`.
 
+### Itemized project costs
+
+All three POST endpoints accept an optional `itemized_costs` object. When supplied, its
+values become the project cost used by the projection, debt/equity split, Excel workbook,
+and PDF report. Values are INR amounts and must be finite and non-negative; the total
+must not exceed INR 1,000,000,000,000,000. Unknown category names are rejected with HTTP 422.
+
+Supported category names are exact and case-sensitive:
+
+- `Outsourcing`
+- `Warehouse setup`
+- `Hospital setup / expansion`
+- `Retail / pharmacy setup or expansion`
+- `Optical setup or expansion`
+- `Equipment and technology`
+- `Licences, deposits and professional fees`
+- `Initial inventory and working capital`
+- `Other project costs`
+
+Example request fragment:
+
+```json
+{
+  "project_cost": 3500000,
+  "debt_pct": 60,
+  "itemized_costs": {
+    "Outsourcing": 1500000,
+    "Warehouse setup": 2000000
+  }
+}
+```
+
+In this example, itemized costs override `project_cost` and produce a total project cost
+of INR 3,500,000, debt of INR 2,100,000, and equity of INR 1,400,000. Categories omitted
+from the object are treated as zero in the Excel cost breakdown. If `itemized_costs` is
+omitted, the API uses the supplied aggregate `project_cost` as before.
+
 ## Container
 
 Build from this directory:
@@ -64,3 +101,42 @@ python -m pytest -q
 ## Limitations and security
 
 This is an early planning tool, not audited accounts or a lender-approved project report. Tax, depreciation, working capital, detailed cash flow, and full loan amortisation need validation before external financial use. Never commit service-role keys, passwords, or other secrets.
+
+## Financial calculation methodology
+
+The projection is an annual, simplified operating and debt-service model. All monetary
+values are INR.
+
+- **Revenue:** Year 1 revenue is monthly revenue multiplied by 12. Each later year
+  compounds the prior year's revenue by the annual growth assumption.
+- **Variable costs:** Calculated as a percentage of that year's revenue.
+- **Fixed costs:** Monthly fixed costs multiplied by 12; held flat in nominal INR for
+  every forecast year. No fixed-cost inflation is assumed.
+- **EBITDA:** Revenue less variable and fixed operating costs.
+- **Debt and equity:** Project cost multiplied by the debt-funding percentage; equity is
+  the remaining project cost.
+- **Principal:** Equal annual principal repayments over the selected loan term. This is
+  not an EMI calculation and does not model monthly instalments or fees.
+- **Interest:** Annual interest rate applied to the opening debt balance while the loan
+  remains outstanding.
+- **DSCR:** EBITDA divided by total annual debt service (interest plus principal).
+  It is blank/null when there is no debt service; a negative DSCR is possible when EBITDA
+  is negative.
+- **Profit before tax:** EBITDA less interest, before depreciation and tax.
+- **Cash after debt service:** EBITDA less interest and principal. This is pre-tax and
+  pre-capex, and must not be interpreted as free cash flow or cash available for
+  distribution.
+- **Break-even revenue:** Annual fixed costs divided by one minus the variable-cost rate.
+  It is undefined when variable costs are 100% of revenue.
+
+Growth, variable-cost percentage, debt percentage, interest rate, loan term, and forecast
+horizon are bounded by API validation. The Excel workbook provides matching input
+validations and recalculation formulas. The PDF is a snapshot of the assumptions submitted
+to the API; edits made only inside a downloaded workbook are not automatically reflected
+in a separately exported PDF.
+
+The model does not currently include taxes, depreciation, capital expenditure, working
+capital movements, inventory schedules, monthly seasonality, price/volume drivers,
+inflation in fixed costs, grace periods, balloon payments, or monthly EMI amortisation.
+Review these omissions and replace illustrative assumptions with project-specific
+evidence before using outputs for a bank, investor, or operating decision.
