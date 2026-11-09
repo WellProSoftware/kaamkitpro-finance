@@ -626,11 +626,11 @@ def test_pdf_report_includes_complete_monthly_emi_schedule():
     projection["monthly_debt_schedule"] = [
         {
             "month": month,
-            "opening_balance": 600_000 - (month - 1) * 25_000,
-            "emi": 30_000,
-            "principal_repayment": 25_000,
-            "interest_payment": 5_000,
-            "closing_balance": 600_000 - month * 25_000,
+            "opening_balance": max(0, 600_000 - (month - 1) * 25_000),
+            "emi": min(25_000, max(0, 600_000 - (month - 1) * 25_000)) + (5_000 if month <= 24 else 0),
+            "principal_repayment": min(25_000, max(0, 600_000 - (month - 1) * 25_000)),
+            "interest_payment": 5_000 if month <= 24 else 0,
+            "closing_balance": max(0, 600_000 - month * 25_000),
         }
         for month in range(1, 73)
     ]
@@ -639,7 +639,7 @@ def test_pdf_report_includes_complete_monthly_emi_schedule():
 
     assert b"Monthly EMI repayment schedule" in content
     assert b"Month 1 | 600,000.00 | 30,000.00 | 25,000.00 | 5,000.00 | 575,000.00" in content
-    assert b"Month 72 | -1,175,000.00 | 30,000.00 | 25,000.00 | 5,000.00 | -1,200,000.00" in content
+    assert b"Month 72 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00" in content
     assert content.count(b"/Type /Page /Parent") >= 2
 
 
