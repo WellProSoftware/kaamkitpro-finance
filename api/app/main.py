@@ -1,18 +1,18 @@
 import os
 from typing import Any
+from math import isfinite
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
+from .funding import list_funding_routes
 from .model import build_projection
 from .reports import build_excel_report, build_pdf_report
 
-app = FastAPI(title="KaamKitPro Finance API", version="0.3.0")
+app = FastAPI(title="KaamKitPro Finance API", version="0.4.0")
 
-# Configure explicit staging frontend origins via FINANCE_CORS_ORIGINS.
-# Keep localhost available for local development; do not use wildcard origins.
 _default_origins = "http://localhost:3000,http://127.0.0.1:3000"
 _allowed_origins = [
     origin.strip()
@@ -32,18 +32,43 @@ class ProjectionInput(BaseModel):
     project_name: str = Field(default="New Project", max_length=120)
     project_type: str = Field(default="Other", max_length=80)
     project_cost: float = Field(default=0, ge=0, le=1_000_000_000_000_000)
-    debt_pct: float = Field(default=50, ge=0, le=100)
+    debt_pct: float = Field(default=0, ge=0, le=100)
     monthly_revenue: float = Field(default=0, ge=0, le=1_000_000_000_000_000)
-    growth_pct: float = Field(default=5, ge=-100, le=500)
-    variable_cost_pct: float = Field(default=45, ge=0, le=100)
+    growth_pct: float = Field(default=0, ge=-100, le=500)
+    variable_cost_pct: float = Field(default=0, ge=0, le=100)
     monthly_fixed_cost: float = Field(default=0, ge=0, le=1_000_000_000_000_000)
-    interest_pct: float = Field(default=11, ge=0, le=100)
-    loan_years: int = Field(default=7, ge=1, le=30)
-    projection_years: int = Field(default=5, ge=1, le=100)
+    interest_pct: float = Field(default=0, ge=0, le=100)
+    repayment_method: str = Field(default="equal_annual_principal", pattern="^(equal_annual_principal|monthly_emi)$")
+    fixed_cost_inflation_pct: float = Field(default=0, ge=0, le=100)
+    loan_years: int = Field(default=1, ge=1, le=30)
+    projection_years: int = Field(default=1, ge=1, le=100)
+    itemized_costs: dict[str, float] | None = None
+
+
+ITEMIZED_COST_CATEGORIES = {
+    "Outsourcing", "Warehouse setup", "Hospital setup / expansion",
+    "Retail / pharmacy setup or expansion", "Optical setup or expansion",
+    "Equipment and technology", "Licences, deposits and professional fees",
+    "Initial inventory and working capital", "Other project costs",
+}
 
 
 def make_projection(data: ProjectionInput) -> dict[str, Any]:
-    result = build_projection(data.model_dump())
+    values = data.model_dump(exclude={"itemized_costs"})
+    if data.itemized_costs is not None:
+        unknown = set(data.itemized_costs) - ITEMIZED_COST_CATEGORIES
+        if unknown:
+            raise ValueError("Unknown itemized project cost category")
+        for category, amount in data.itemized_costs.items():
+            if not isfinite(float(amount)) or float(amount) < 0 or float(amount) > 1_000_000_000_000_000:
+                raise ValueError(f"{category} must be a finite non-negative amount within the supported limit")
+        itemized_total = sum(float(v) for v in data.itemized_costs.values())
+        if not isfinite(itemized_total) or itemized_total > 1_000_000_000_000_000:
+            raise ValueError("Total itemized project costs exceed the supported limit")
+        values["project_cost"] = round(itemized_total, 2)
+    result = build_projection(values)
+    if data.itemized_costs is not None:
+        result["model_inputs"]["itemized_costs"] = data.itemized_costs
     result["project_name"] = data.project_name
     result["project_type"] = data.project_type
     return result
@@ -60,8 +85,13 @@ def root():
         "service": "KaamKitPro Finance API",
         "docs": "/docs",
         "health": "/health",
-        "endpoints": ["/api/projection", "/api/reports/excel", "/api/reports/pdf"],
+        "endpoints": ["/api/projection", "/api/funding/routes", "/api/reports/excel", "/api/reports/pdf"],
     }
+
+
+@app.get("/api/funding/routes")
+def funding_routes():
+    return list_funding_routes()
 
 
 def validated_projection(data: ProjectionInput) -> dict[str, Any]:

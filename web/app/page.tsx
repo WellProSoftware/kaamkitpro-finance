@@ -12,22 +12,40 @@ type Inputs = {
   variableCostPct: number;
   monthlyFixedCost: number;
   interestPct: number;
+  fixedCostInflationPct: number;
   loanYears: number;
   projectionYears: number;
 };
 
+type CostKey = "Outsourcing" | "Warehouse setup" | "Hospital setup / expansion" | "Retail / pharmacy setup or expansion" | "Optical setup or expansion" | "Equipment and technology" | "Licences, deposits and professional fees" | "Initial inventory and working capital" | "Other project costs";
+type ItemizedCosts = Record<CostKey, number>;
+const MAX_PROJECT_COST = 1_000_000_000_000_000;
+const costLabels: CostKey[] = ["Outsourcing", "Warehouse setup", "Hospital setup / expansion", "Retail / pharmacy setup or expansion", "Optical setup or expansion", "Equipment and technology", "Licences, deposits and professional fees", "Initial inventory and working capital", "Other project costs"];
+const initialCosts: ItemizedCosts = {
+  "Outsourcing": 0,
+  "Warehouse setup": 0,
+  "Hospital setup / expansion": 0,
+  "Retail / pharmacy setup or expansion": 0,
+  "Optical setup or expansion": 0,
+  "Equipment and technology": 0,
+  "Licences, deposits and professional fees": 0,
+  "Initial inventory and working capital": 0,
+  "Other project costs": 0,
+};
+
 const initial: Inputs = {
   projectName: "New Project",
-  projectType: "Hospital",
-  projectCost: 50000000,
-  debtPct: 60,
-  monthlyRevenue: 8000000,
-  growthPct: 8,
-  variableCostPct: 48,
-  monthlyFixedCost: 2200000,
-  interestPct: 11,
-  loanYears: 7,
-  projectionYears: 5,
+  projectType: "Other",
+  projectCost: 0,
+  debtPct: 0,
+  monthlyRevenue: 0,
+  growthPct: 0,
+  variableCostPct: 0,
+  monthlyFixedCost: 0,
+  interestPct: 0,
+  fixedCostInflationPct: 0,
+  loanYears: 1,
+  projectionYears: 1,
 };
 
 const money = (value: number) => new Intl.NumberFormat("en-IN", {
@@ -36,6 +54,8 @@ const money = (value: number) => new Intl.NumberFormat("en-IN", {
 
 export default function Home() {
   const [inputs, setInputs] = useState<Inputs>(initial);
+  const [useItemizedCosts, setUseItemizedCosts] = useState(false);
+  const [itemizedCosts, setItemizedCosts] = useState<ItemizedCosts>(initialCosts);
   const [saved, setSaved] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [exportStatus, setExportStatus] = useState("");
@@ -47,23 +67,33 @@ export default function Home() {
       if (raw) {
         const parsed: unknown = JSON.parse(raw);
         if (parsed && typeof parsed === "object") {
-          const draft = parsed as Partial<Inputs>;
+          const draft = parsed as Partial<Inputs> & { useItemizedCosts?: boolean; itemizedCosts?: Partial<ItemizedCosts> };
           const validNumber = (value: unknown): value is number =>
             typeof value === "number" && Number.isFinite(value);
           if (
-            typeof draft.projectName === "string" &&
-            typeof draft.projectType === "string" &&
-            validNumber(draft.projectCost) && draft.projectCost >= 0 &&
+            typeof draft.projectName === "string" && draft.projectName.length <= 120 &&
+            typeof draft.projectType === "string" && draft.projectType.length <= 80 &&
+            validNumber(draft.projectCost) && draft.projectCost >= 0 && draft.projectCost <= MAX_PROJECT_COST &&
             validNumber(draft.debtPct) && draft.debtPct >= 0 && draft.debtPct <= 100 &&
-            validNumber(draft.monthlyRevenue) && draft.monthlyRevenue >= 0 &&
+            validNumber(draft.monthlyRevenue) && draft.monthlyRevenue >= 0 && draft.monthlyRevenue <= MAX_PROJECT_COST &&
             validNumber(draft.growthPct) && draft.growthPct >= -100 && draft.growthPct <= 500 &&
             validNumber(draft.variableCostPct) && draft.variableCostPct >= 0 && draft.variableCostPct <= 100 &&
-            validNumber(draft.monthlyFixedCost) && draft.monthlyFixedCost >= 0 &&
+            validNumber(draft.monthlyFixedCost) && draft.monthlyFixedCost >= 0 && draft.monthlyFixedCost <= MAX_PROJECT_COST &&
             validNumber(draft.interestPct) && draft.interestPct >= 0 && draft.interestPct <= 100 &&
+            validNumber(draft.fixedCostInflationPct ?? 0) && (draft.fixedCostInflationPct ?? 0) >= 0 && (draft.fixedCostInflationPct ?? 0) <= 100 &&
             validNumber(draft.loanYears) && Number.isInteger(draft.loanYears) && draft.loanYears >= 1 && draft.loanYears <= 30 &&
             validNumber(draft.projectionYears) && Number.isInteger(draft.projectionYears) && draft.projectionYears >= 1 && draft.projectionYears <= 100
           ) {
             setInputs({ ...initial, ...draft });
+            if (typeof draft.useItemizedCosts === "boolean") setUseItemizedCosts(draft.useItemizedCosts);
+            if (draft.itemizedCosts && typeof draft.itemizedCosts === "object") {
+              const restored = { ...initialCosts };
+              for (const key of costLabels) {
+                const value = draft.itemizedCosts[key];
+                if (typeof value === "number" && Number.isFinite(value) && value >= 0) restored[key] = value;
+              }
+              setItemizedCosts(restored);
+            }
             setSaved(true);
           }
         }
@@ -76,35 +106,65 @@ export default function Home() {
   }, []);
 
   const update = (key: keyof Inputs, value: string) => {
-    const numeric = ["projectCost","debtPct","monthlyRevenue","growthPct","variableCostPct","monthlyFixedCost","interestPct","loanYears","projectionYears"].includes(key);
+    const numeric = ["projectCost","debtPct","monthlyRevenue","growthPct","variableCostPct","monthlyFixedCost","interestPct","fixedCostInflationPct","loanYears","projectionYears"].includes(key);
     setInputs((prev) => ({ ...prev, [key]: numeric ? Number(value) : value }));
     setSaved(false);
   };
 
+  const inputErrors: string[] = [];
+  if (!Number.isFinite(inputs.projectCost) || inputs.projectCost < 0 || inputs.projectCost > MAX_PROJECT_COST) inputErrors.push('Project cost must be between ₹0 and ₹1,000,000,000,000,000.');
+  if (!Number.isFinite(inputs.debtPct) || inputs.debtPct < 0 || inputs.debtPct > 100) inputErrors.push('Loan funding must be between 0% and 100%.');
+  if (!Number.isFinite(inputs.monthlyRevenue) || inputs.monthlyRevenue < 0 || inputs.monthlyRevenue > MAX_PROJECT_COST) inputErrors.push('Monthly revenue must be a valid non-negative amount.');
+  if (!Number.isFinite(inputs.growthPct) || inputs.growthPct < -100 || inputs.growthPct > 500) inputErrors.push('Annual revenue growth must be between -100% and 500%.');
+  if (!Number.isFinite(inputs.variableCostPct) || inputs.variableCostPct < 0 || inputs.variableCostPct > 100) inputErrors.push('Variable costs must be between 0% and 100%.');
+  if (!Number.isFinite(inputs.monthlyFixedCost) || inputs.monthlyFixedCost < 0 || inputs.monthlyFixedCost > MAX_PROJECT_COST) inputErrors.push('Monthly fixed costs must be a valid non-negative amount.');
+  if (!Number.isFinite(inputs.interestPct) || inputs.interestPct < 0 || inputs.interestPct > 100) inputErrors.push('Annual interest rate must be between 0% and 100%.');
+  if (!Number.isFinite(inputs.fixedCostInflationPct) || inputs.fixedCostInflationPct < 0 || inputs.fixedCostInflationPct > 100) inputErrors.push('Annual fixed-cost inflation must be between 0% and 100%.');
+  if (!Number.isInteger(inputs.loanYears) || inputs.loanYears < 1 || inputs.loanYears > 30) inputErrors.push('Loan tenure must be a whole number from 1 to 30 years.');
+  if (!Number.isInteger(inputs.projectionYears) || inputs.projectionYears < 1 || inputs.projectionYears > 100) inputErrors.push('Projection period must be a whole number from 1 to 100 years.');
+  const inputError = inputErrors[0] ?? '';
+  const itemizedTotal = costLabels.reduce((sum, key) => sum + itemizedCosts[key], 0);
+  const itemizedCostsValid = costLabels.every((key) => Number.isFinite(itemizedCosts[key]) && itemizedCosts[key] >= 0) && Number.isFinite(itemizedTotal) && itemizedTotal <= MAX_PROJECT_COST;
+  const itemizedCostsError = useItemizedCosts && !itemizedCostsValid
+    ? `Itemized project costs must have a finite total of no more than ${money(MAX_PROJECT_COST)}. Reduce one or more categories before exporting.`
+    : "";
+  const exportsDisabled = exporting !== null || Boolean(itemizedCostsError) || Boolean(inputError);
+  const effectiveProjectCost = useItemizedCosts ? (itemizedCostsValid ? itemizedTotal : 0) : inputs.projectCost;
+
   const model = useMemo(() => {
-    const debt = inputs.projectCost * inputs.debtPct / 100;
-    const equity = inputs.projectCost - debt;
+    const debt = effectiveProjectCost * inputs.debtPct / 100;
+    const equity = effectiveProjectCost - debt;
     const variableRate = Math.min(100, Math.max(0, inputs.variableCostPct)) / 100;
     const rows = Array.from({ length: Math.max(1, Math.min(100, inputs.projectionYears || 1)) }, (_, i) => {
       const year = i + 1;
       const revenue = inputs.monthlyRevenue * 12 * Math.pow(1 + inputs.growthPct / 100, i);
       const variableCost = revenue * variableRate;
-      const fixedCost = inputs.monthlyFixedCost * 12;
+      const fixedCost = inputs.monthlyFixedCost * 12 * Math.pow(1 + inputs.fixedCostInflationPct / 100, i);
       const ebitda = revenue - variableCost - fixedCost;
       const principal = year <= inputs.loanYears ? debt / Math.max(1, inputs.loanYears) : 0;
       const openingDebt = Math.max(0, debt - (year - 1) * debt / Math.max(1, inputs.loanYears));
       const interest = year <= inputs.loanYears ? openingDebt * inputs.interestPct / 100 : 0;
       const debtService = principal + interest;
-      return { year, revenue, variableCost, fixedCost, ebitda, interest, principal, debtService,
-        dscr: debtService > 0 ? ebitda / debtService : null,
-        breakEven: variableRate < 1 ? fixedCost / (1 - variableRate) : null,
-        cash: ebitda - debtService };
+      return {
+        year,
+        revenue: Math.round(revenue * 100) / 100,
+        variableCost: Math.round(variableCost * 100) / 100,
+        fixedCost: Math.round(fixedCost * 100) / 100,
+        ebitda: Math.round(ebitda * 100) / 100,
+        interest: Math.round(interest * 100) / 100,
+        principal: Math.round(principal * 100) / 100,
+        debtService: Math.round(debtService * 100) / 100,
+        dscr: debtService > 0 ? Math.round((ebitda / debtService) * 100) / 100 : null,
+        breakEven: variableRate < 1 ? Math.round((fixedCost / (1 - variableRate)) * 100) / 100 : null,
+        cash: Math.round((ebitda - debtService) * 100) / 100,
+      };
     });
     return { debt, equity, rows };
-  }, [inputs]);
+  }, [inputs, effectiveProjectCost]);
 
   const exportCsv = () => {
-    const headers = ["Year","Revenue","Variable Cost","Fixed Cost","EBITDA","Interest","Principal","Debt Service","DSCR","Break-even Revenue","Cash After Debt Service"];
+    if (inputError || itemizedCostsError) { setExportStatus(inputError || itemizedCostsError); return; }
+    const headers = ["Year","Revenue","Variable Cost","Fixed Cost","EBITDA","Interest","Principal","Debt Service","DSCR","Break-even Revenue","Cash After Debt Service (Pre-Tax, Pre-Capex)"];
     const lines = [headers, ...model.rows.map((r) => [r.year,r.revenue,r.variableCost,r.fixedCost,r.ebitda,r.interest,r.principal,r.debtService,r.dscr ?? "",r.breakEven ?? "",r.cash])];
     const csv = lines.map((row) => row.map((v) => {
       const s = String(v ?? "");
@@ -119,6 +179,7 @@ export default function Home() {
   };
 
   const exportReport = async (format: "excel" | "pdf") => {
+    if (inputError || itemizedCostsError) { setExportStatus(inputError || itemizedCostsError); return; }
     const apiBase = process.env.NEXT_PUBLIC_FINANCE_API_URL?.trim().replace(/\/$/, "");
     if (!apiBase) {
       setExportStatus("Excel/PDF export is ready to connect, but the staging API URL is not configured yet. CSV export remains available.");
@@ -130,13 +191,15 @@ export default function Home() {
     const payload = {
       project_name: inputs.projectName,
       project_type: inputs.projectType,
-      project_cost: inputs.projectCost,
+      project_cost: effectiveProjectCost,
+      ...(useItemizedCosts ? { itemized_costs: itemizedCosts } : {}),
       debt_pct: inputs.debtPct,
       monthly_revenue: inputs.monthlyRevenue,
       growth_pct: inputs.growthPct,
       variable_cost_pct: inputs.variableCostPct,
       monthly_fixed_cost: inputs.monthlyFixedCost,
       interest_pct: inputs.interestPct,
+      fixed_cost_inflation_pct: inputs.fixedCostInflationPct,
       loan_years: inputs.loanYears,
       projection_years: inputs.projectionYears,
     };
@@ -174,11 +237,19 @@ export default function Home() {
   };
 
   const saveAssumptions = () => {
+    const validationError = inputError || itemizedCostsError;
+    if (validationError) {
+      setExportStatus(validationError);
+      setSaved(false);
+      return;
+    }
     try {
-      localStorage.setItem("kaamkitpro-finance-draft", JSON.stringify(inputs));
+      localStorage.setItem("kaamkitpro-finance-draft", JSON.stringify({ ...inputs, useItemizedCosts, itemizedCosts }));
       setSaved(true);
+      setExportStatus("Project assumptions saved in this browser.");
     } catch {
       setSaved(false);
+      setExportStatus("Could not save this draft. Check browser storage settings and try again.");
     }
   };
 
@@ -190,23 +261,27 @@ export default function Home() {
       </header>
 
       <section className="hero">
-        <div><div className="eyebrow">Financial planning workspace</div><h1>Turn your project into a clear financial plan.</h1><p>Build a practical first-pass projection for a hospital, pharmacy, optical store, retail business, warehouse or manufacturing project.</p></div>
-        <div className="actions"><button className="secondary" onClick={saveAssumptions}>Save draft</button><button className="secondary" onClick={exportCsv}>Export CSV</button><button className="secondary" onClick={() => void exportReport("excel")} disabled={exporting !== null}>{exporting === "excel" ? "Preparing Excel…" : "Export Excel"}</button><button className="secondary" onClick={() => void exportReport("pdf")} disabled={exporting !== null}>{exporting === "pdf" ? "Preparing PDF…" : "Export PDF"}</button></div>
+        <div><div className="eyebrow">Financial planning workspace</div><h1>Turn your project into a clear financial plan.</h1><p>Build a flexible first-pass projection for any business, industry, service, manufacturing activity, expansion or new project.</p></div>
+        <div className="actions"><button className="secondary" onClick={saveAssumptions}>Save draft</button><button className="secondary" onClick={exportCsv} disabled={exportsDisabled}>Export CSV</button><button className="secondary" onClick={() => void exportReport("excel")} disabled={exportsDisabled}>{exporting === "excel" ? "Preparing Excel…" : "Export Excel"}</button><button className="secondary" onClick={() => void exportReport("pdf")} disabled={exportsDisabled}>{exporting === "pdf" ? "Preparing PDF…" : "Export PDF"}</button></div>
       </section>
 
       <div className="grid">
         <section className="card">
           <h2 className="section-title">Project assumptions</h2><p className="section-desc">Change any input to recalculate the projection instantly. Figures are in Indian rupees. Drafts stay in this browser.</p>
+          {inputError && <p className="section-desc" role="alert" style={{color:"#b42318",marginBottom:12}}>{inputError}</p>}
           <div className="fields">
             <div className="field full"><label htmlFor="projectName">Project name</label><input id="projectName" value={inputs.projectName} onChange={(e) => update("projectName", e.target.value)} maxLength={120}/></div>
-            <div className="field full"><label htmlFor="projectType">Business type</label><select id="projectType" value={inputs.projectType} onChange={(e) => update("projectType", e.target.value)}>{["Hospital","Pharmacy","Optical","Retail","Warehouse","Manufacturing","Services","Other"].map(x=><option key={x}>{x}</option>)}</select></div>
+            <div className="field full"><label htmlFor="projectType">Business / industry / project activity</label><input id="projectType" value={inputs.projectType} onChange={(e) => update("projectType", e.target.value)} maxLength={80} placeholder="Enter any business, industry or project activity" /><p className="section-desc">Open text field: enter any sector, profession, service, manufacturing activity, expansion or new business.</p></div>
             <div className="field"><label htmlFor="projectCost">Total project cost (₹)</label><div className="input-wrap"><span>₹</span><input id="projectCost" type="number" min="0" value={inputs.projectCost} onChange={(e) => update("projectCost", e.target.value)}/></div></div>
+            <div className="field full"><label><input type="checkbox" checked={useItemizedCosts} onChange={(e) => { setUseItemizedCosts(e.target.checked); setSaved(false); }} /> Use itemized project costs</label><p className="section-desc">Enter setup costs by category. The total will automatically replace the aggregate project cost for projections and Excel/PDF exports.</p></div>
+            {useItemizedCosts && <div className="field full"><div className="table-wrap"><table><thead><tr><th>Project cost category</th><th>Amount (₹)</th></tr></thead><tbody>{costLabels.map((key) => <tr key={key}><td>{key}</td><td><input aria-label={key} type="number" min="0" max={MAX_PROJECT_COST} value={itemizedCosts[key]} onChange={(e) => { const value = Math.min(MAX_PROJECT_COST, Math.max(0, Number(e.target.value) || 0)); setItemizedCosts((prev) => ({ ...prev, [key]: value })); setSaved(false); }} /></td></tr>)}</tbody><tfoot><tr><th>Total itemized project cost</th><th>{money(itemizedTotal)}</th></tr></tfoot></table></div>{itemizedCostsError && <p className="section-desc" role="alert" style={{color:"#b42318",marginTop:10}}>{itemizedCostsError}</p>}</div>}
             <div className="field"><label htmlFor="debtPct">Loan funding (%)</label><input id="debtPct" type="number" min="0" max="100" value={inputs.debtPct} onChange={(e) => update("debtPct", e.target.value)}/></div>
             <div className="field"><label htmlFor="monthlyRevenue">Monthly revenue (₹)</label><div className="input-wrap"><span>₹</span><input id="monthlyRevenue" type="number" min="0" value={inputs.monthlyRevenue} onChange={(e) => update("monthlyRevenue", e.target.value)}/></div></div>
             <div className="field"><label htmlFor="growthPct">Annual revenue growth (%)</label><input id="growthPct" type="number" min="-100" max="500" value={inputs.growthPct} onChange={(e) => update("growthPct", e.target.value)}/></div>
             <div className="field"><label htmlFor="variableCostPct">Variable costs (%)</label><input id="variableCostPct" type="number" min="0" max="100" value={inputs.variableCostPct} onChange={(e) => update("variableCostPct", e.target.value)}/></div>
             <div className="field"><label htmlFor="monthlyFixedCost">Monthly fixed costs (₹)</label><div className="input-wrap"><span>₹</span><input id="monthlyFixedCost" type="number" min="0" value={inputs.monthlyFixedCost} onChange={(e) => update("monthlyFixedCost", e.target.value)}/></div></div>
             <div className="field"><label htmlFor="interestPct">Annual interest rate (%)</label><input id="interestPct" type="number" min="0" max="100" value={inputs.interestPct} onChange={(e) => update("interestPct", e.target.value)}/></div>
+            <div className="field"><label htmlFor="fixedCostInflationPct">Annual fixed-cost inflation (%)</label><input id="fixedCostInflationPct" type="number" min="0" max="100" value={inputs.fixedCostInflationPct} onChange={(e) => update("fixedCostInflationPct", e.target.value)}/></div>
             <div className="field"><label htmlFor="loanYears">Loan tenure (years)</label><input id="loanYears" type="number" min="1" max="30" value={inputs.loanYears} onChange={(e) => update("loanYears", e.target.value)}/></div>
             <div className="field"><label htmlFor="projectionYears">Projection period (years, up to 100)</label><input id="projectionYears" type="number" min="1" max="100" step="1" value={inputs.projectionYears} onChange={(e) => update("projectionYears", e.target.value)}/></div>
           </div>
@@ -216,14 +291,48 @@ export default function Home() {
 
         <section>
           <div className="stats">
-            <div className="stat blue"><span>Total project cost</span><strong>{money(inputs.projectCost)}</strong><small>Initial project investment</small></div>
+            <div className="stat blue"><span>Total project cost</span><strong>{money(effectiveProjectCost)}</strong><small>{useItemizedCosts ? "Total of itemized cost categories" : "Initial project investment"}</small></div>
             <div className="stat"><span>Estimated loan</span><strong>{money(model.debt)}</strong><small>{inputs.debtPct}% of project cost</small></div>
             <div className="stat green"><span>Owner contribution</span><strong>{money(model.equity)}</strong><small>Estimated equity funding</small></div>
           </div>
           <div className="card" style={{marginBottom:16}}>
+            <h2 className="section-title">Funding routes &amp; scheme reference (India)</h2>
+            <p className="section-desc">Use this as a first-pass funding shortlist for the estimated requirement of {money(model.debt)}. It is not an eligibility certificate or loan sanction.</p>
+            <div className="note">
+              <strong>Government-backed / bank routes</strong>
+              <ul style={{margin:"8px 0 0",paddingLeft:20}}>
+                <li><strong>CGTMSE:</strong> Eligible micro and small enterprises may seek lender credit with guarantee cover. Current scheme ceiling is up to ₹10 crore; Udyam registration and lender appraisal apply. CGTMSE does not lend directly and is not a subsidy.</li>
+                <li><strong>MUDRA (PMMY):</strong> Shishu up to ₹50,000; Kishore above ₹50,000–₹5 lakh; Tarun above ₹5–₹10 lakh; Tarun Plus above ₹10–₹20 lakh only after successful repayment of an earlier Tarun loan.</li>
+                <li><strong>PMEGP:</strong> New eligible non-farm micro-enterprises only under the new-unit route. Margin-money subsidy project ceilings are ₹50 lakh for manufacturing and ₹20 lakh for service/business; applicant category and rural/urban location affect contribution and subsidy rates. Existing-unit expansion is generally not eligible under the new-unit route.</li>
+                <li><strong>Stand-Up India:</strong> Legacy scheme period ended on 31 March 2025. A successor programme was announced; verify implementation and current application availability with the bank before relying on legacy terms.</li>
+              </ul>
+            </div>
+            <div className="note" style={{marginTop:10}}>
+              <strong>Private funding routes</strong>
+              <ul style={{margin:"8px 0 0",paddingLeft:20}}>
+                <li><strong>Bank / NBFC term loan or working capital:</strong> compare sanction amount, reducing-balance rate, processing fee, security, moratorium, monthly EMI and prepayment charges.</li>
+                <li><strong>Private debt / structured finance:</strong> compare effective annual cost, collateral, covenants, personal guarantees and default clauses; verify the lender is regulated where applicable.</li>
+                <li><strong>Angel / strategic / private equity:</strong> prepare valuation, cap table, unit economics, market proof, milestones, governance rights, dilution and exit scenarios. Equity is not a loan and has no fixed EMI.</li>
+              </ul>
+            </div>
+            <p className="section-desc" style={{marginTop:12}}>Official references: <a href="https://financialservices.gov.in/pradhan-mantri-mudra-yojana-pmmy" target="_blank" rel="noreferrer">MUDRA / DFS</a> · <a href="https://www.cgtmse.in/" target="_blank" rel="noreferrer">CGTMSE</a> · <a href="https://www.kviconline.gov.in/pmegpeportal/" target="_blank" rel="noreferrer">PMEGP portal</a> · <a href="https://www.financialservices.gov.in/stand-india-scheme-supi" target="_blank" rel="noreferrer">Stand-Up India status</a> · <a href="https://www.jansamarth.in/" target="_blank" rel="noreferrer">JanSamarth</a>.</p>
+            <p className="note">Scheme and bank terms can change. Final eligibility, margin, interest, collateral, subsidy, guarantee cover and sanction are decided by the implementing agency or lender. Re-check official circulars and the lender's Key Facts Statement on the application date.</p>
+          </div>
+          <div className="card" style={{marginBottom:16}}>
             <h2 className="section-title">Annual financial projection</h2><p className="section-desc">Illustrative operating model · INR</p>
-            <div className="table-wrap"><table><thead><tr><th>Year</th><th>Revenue</th><th>EBITDA</th><th>Debt service</th><th>DSCR</th><th>Cash after debt</th></tr></thead><tbody>{model.rows.map(r=><tr key={r.year}><td>Year {r.year}</td><td>{money(r.revenue)}</td><td className={r.ebitda>=0?"positive":"negative"}>{money(r.ebitda)}</td><td>{money(r.debtService)}</td><td>{r.dscr===null?"—":r.dscr.toFixed(2)+"x"}</td><td className={r.cash>=0?"positive":"negative"}>{money(r.cash)}</td></tr>)}</tbody></table></div>
-            <div className="note">DSCR = EBITDA ÷ scheduled principal and interest. This simplified version excludes tax, depreciation, working capital, detailed monthly amortisation and sector-specific assumptions.</div>
+            <div className="table-wrap"><table><thead><tr><th>Year</th><th>Revenue</th><th>EBITDA</th><th>Debt service</th><th>DSCR</th><th>Cash after debt (pre-tax, pre-capex)</th></tr></thead><tbody>{model.rows.map(r=><tr key={r.year}><td>Year {r.year}</td><td>{money(r.revenue)}</td><td className={r.ebitda>=0?"positive":"negative"}>{money(r.ebitda)}</td><td>{money(r.debtService)}</td><td>{r.dscr===null?"—":r.dscr.toFixed(2)+"x"}</td><td className={r.cash>=0?"positive":"negative"}>{money(r.cash)}</td></tr>)}</tbody></table></div>
+            <div className="note">DSCR = EBITDA ÷ scheduled principal and interest. Cash after debt service = EBITDA less interest and principal; it is pre-tax and pre-capex, not free cash flow.</div>
+            <div className="note" style={{marginTop:12}}>
+              <strong>Model methodology &amp; limitations</strong>
+              <ul style={{margin:"8px 0 0",paddingLeft:20}}>
+                <li>Year 1 revenue is monthly revenue × 12; later years compound the annual growth assumption.</li>
+                <li>Variable costs move with revenue. Monthly fixed costs are annualised and increased by the annual fixed-cost inflation assumption.</li>
+                <li>Debt is repaid using equal annual principal during the loan tenure. Interest is calculated on each year's opening loan balance; this is not a monthly EMI schedule.</li>
+                <li>EBITDA is before interest, depreciation and tax. DSCR compares EBITDA with scheduled principal plus interest.</li>
+                <li>This version accepts any business or project label; revenue and cost assumptions remain user-entered and should be supported by sector-specific volumes, pricing, capacity, staffing, inventory and ramp-up evidence.</li>
+              </ul>
+              <p style={{margin:"8px 0 0"}}>Treat outputs as planning estimates. Validate assumptions and financing terms with your accountant and lender before relying on them for investment or credit decisions.</p>
+            </div>
           </div>
           <div className="card">
             <h2 className="section-title">Revenue outlook</h2><p className="section-desc">Projected annual revenue based on the growth assumption.</p>
